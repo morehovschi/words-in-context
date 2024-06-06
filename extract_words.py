@@ -4,21 +4,64 @@ import spacy
 import json
 import time
 import math
+import re
 
 from progress.bar import Bar
 from joblib import Parallel, delayed
 
 # load English language model
 
-# here you may get an error like:
+# here you may get this error:
 # '''
 # [E050] Can't find model 'en_core_web_sm'. It doesn't seem to be a Python
 # package or a valid path to a data directory.
 # '''
 
-# which simply means you haven't yet downloaded the necessary spaCy model yet;
+# which simply means you haven't yet downloaded the necessary spaCy model;
 # download the model with 'python -m spacy download en_core_web_sm'
 nlp = spacy.load("en_core_web_sm")
+
+TIMESTAMP_REGEX = "[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}"
+
+def srt_sentences( fpath ):
+    sentences = [ "" ]  # first item is empty string so that indices match numbers
+    with open( fpath, "r" ) as f:
+        counting = False
+        num = None
+        timestamp = None  # timestamp is only used for validating format
+        sentence = ""
+
+        line = f.readline()
+        while line:
+            if not counting:
+                # subtitle line counting starts at byte order mark (unicode 65279)
+                if chr( 65279 ) in line:
+                    counting = True
+                    num = 1
+                line = f.readline()
+                continue
+
+            line = line.strip()
+
+            if line.isnumeric() and int( line ) == num + 1:
+                sentences.append( sentence.strip() )
+
+                num +=1
+                timestamp = None
+                sentence = ""
+            elif re.search( TIMESTAMP_REGEX, line ):
+                timestamp = line
+            else:
+                if has_alpha( line ) and timestamp:
+                    sentence += line.strip() + " "
+
+            line = f.readline()
+
+        if timestamp:
+            sentences.append( sentence.strip() )
+
+    return sentences
+
 
 def has_alpha( string ):
     for char in string:
