@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 import os
 import sys
 import spacy
@@ -11,10 +10,14 @@ from joblib import Parallel, delayed
 
 # load English language model
 
-#   here you may get an error like:
-#   <error>
-#   which simply means you haven't yet downloaded the necessary spaCy model yet;
-#   download the model with 'python -m spacy download en_core_web_sm'
+# here you may get an error like:
+# '''
+# [E050] Can't find model 'en_core_web_sm'. It doesn't seem to be a Python
+# package or a valid path to a data directory.
+# '''
+
+# which simply means you haven't yet downloaded the necessary spaCy model yet;
+# download the model with 'python -m spacy download en_core_web_sm'
 nlp = spacy.load("en_core_web_sm")
 
 def has_alpha( string ):
