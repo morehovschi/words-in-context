@@ -19,7 +19,16 @@ from joblib import Parallel, delayed
 
 # which simply means you haven't yet downloaded the necessary spaCy model;
 # download the model with 'python -m spacy download en_core_web_sm'
-nlp = spacy.load("en_core_web_sm")
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError as e:
+    if "Can't find model" in str( e ):
+        spacy.cli.download( "en_core_web_sm" )
+        nlp = spacy.load("en_core_web_sm")
+        breakpoint()
+        print("yay")
+    else:
+        raise e
 
 TIMESTAMP_REGEX = "[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}"
 
