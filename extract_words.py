@@ -172,6 +172,11 @@ if __name__ == "__main__":
         WORDS_TO_PRINT = 20
     else:
         WORDS_TO_PRINT = int( sys.argv[ 2 ] )
+
+    if "--help" in sys.argv:
+    	print(f"USAGE: python3 { sys.argv[ 0 ] }" +
+    		   " <name of .srt file in data/> <num words>" )
+    	exit( 0 )
         
     data_path = 'data/'
 
