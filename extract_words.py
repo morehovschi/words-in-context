@@ -31,7 +31,12 @@ except OSError as e:
 TIMESTAMP_REGEX = "[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}"
 
 def srt_sentences( fpath ):
-    sentences = [ "" ]  # first item is empty string so that indices match numbers
+    """
+    helper that reads an srt file and returns a list of srt senteces where each
+    item's index matches the srt line number
+    """
+
+    sentences = [ "" ]  # first item empty so that indices match srt line numbers
     with open( fpath, "r" ) as f:
         counting = False
         num = None
@@ -64,6 +69,8 @@ def srt_sentences( fpath ):
 
             line = f.readline()
 
+        # if timestamp not None, there is still the last sentence in the file that
+        # has not yet been added to the list
         if timestamp:
             sentences.append( sentence.strip() )
 
