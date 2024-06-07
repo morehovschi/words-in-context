@@ -25,8 +25,6 @@ except OSError as e:
     if "Can't find model" in str( e ):
         spacy.cli.download( "en_core_web_sm" )
         nlp = spacy.load("en_core_web_sm")
-        breakpoint()
-        print("yay")
     else:
         raise e
 
