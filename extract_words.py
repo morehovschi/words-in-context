@@ -142,7 +142,7 @@ def analyze_file( fpath, cache_path='' ):
     """
     counts, total_words = None, None
     
-    fname = fpath[ fpath.rfind( '/' )+1:fpath.find( '.' )]
+    fname = fpath[ fpath.rfind( '/' )+1:fpath.find( '.' ) ]
     
     try:
         with open( cache_path + fname + '.json' ) as json_file:
@@ -160,6 +160,54 @@ def analyze_file( fpath, cache_path='' ):
                 json.dump( counts, json_file )
             
     return counts
+
+def word_sentence_ids( fpath, cache_path="" ):
+    """
+    TODO:
+    """
+    word_sentence_ids = {}
+    sentences = srt_sentences( fpath )
+
+    total_words = 0
+
+    for i, sentence in enumerate( sentences ):
+        if not sentence:
+            continue
+
+        doc = nlp( sentence )
+
+        for token in doc:
+            if ( token.is_punct ) or ( token is None ) or ( token.text == ' ') or\
+               ( token.text == "\n" ):
+                continue
+
+            if token.lemma_.lower() in word_sentence_ids:
+                word_sentence_ids[ token.lemma_.lower() ].append( i )
+            else:
+                 word_sentence_ids[ token.lemma_.lower() ] = [ i ]
+            total_words += 1
+
+    # the total number of words in the file has special key
+    word_sentence_ids[ "__total__" ] = total_words
+
+    return word_sentence_ids
+
+def analyze_file_sentence_ids( fpath, cache_path="" ):
+
+    fname = fpath[ fpath.rfind( '/' )+1:fpath.find( '.' ) ]
+
+    try:
+        with open( cache_path + fname + '_wsid.json' ) as json_file:
+            counts = json.load( json_file )
+
+    except FileNotFoundError:
+        wsid = word_sentence_ids( fpath )
+
+        # if cache path provided, store the counter dictionary
+        if cache_path:
+            with open( cache_path + fname + '_wsid.json' , 'w' ) as json_file:
+                json.dump( wsid, json_file )
+
     
 if __name__ == "__main__":
     if len( sys.argv ) < 2:

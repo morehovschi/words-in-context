@@ -2,3 +2,4 @@
 /env
 data/*.json
 **/__pycache__/
+*.swp
