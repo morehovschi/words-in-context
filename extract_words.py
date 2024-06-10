@@ -212,7 +212,7 @@ def analyze_file_sentence_ids( fpath, cache_path="" ):
 if __name__ == "__main__":
     if len( sys.argv ) < 2:
         # expected format for name of subtitle files
-        file = 'S01E01.srt'
+        file = 'its-a-wonderful-life-1946.srt'
     else:
         file = sys.argv[ 1 ]
         
@@ -284,9 +284,9 @@ if __name__ == "__main__":
     for word in corpus_counts[ file]:
         if word == "__total__":
             continue
-        
+
         doc_word_stats.append( ( word, corpus_counts[ file ][ word ] ) )
-        
+
     # sort words in doc by tf-idf descendingly
     doc_word_stats = sorted( doc_word_stats,
                              key=lambda tup: tup[ 1 ][ 'tf-idf' ],

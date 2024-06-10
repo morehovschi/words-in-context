@@ -95,7 +95,7 @@ class TestAnalyzeFile( unittest.TestCase ):
         test that analyze_file and analyze_file_sentence_ids arrive at the same
         number of occurrences in the doc for each word
         """
-        self._test_parity_for_file( "S01E01.srt" )
+        self._test_parity_for_file( "its-a-wonderful-life-1946.srt" )
 
 
 if __name__ == '__main__':
