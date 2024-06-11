@@ -37,7 +37,7 @@ def srt_sentences( fpath ):
     """
 
     sentences = [ "" ]  # first item empty so that indices match srt line numbers
-    with open( fpath, "r" ) as f:
+    with open( fpath, "r", encoding="utf-8", errors="ignore" ) as f:
         counting = False
         num = None
         timestamp = None  # timestamp is only used for validating format
@@ -46,10 +46,12 @@ def srt_sentences( fpath ):
         line = f.readline()
         while line:
             if not counting:
-                # subtitle line counting starts at byte order mark (unicode 65279)
-                if chr( 65279 ) in line:
+                # potentially remove utf 65279, found once at the beginning of file
+                line = line.replace( chr( 65279 ), "" )
+                if line.strip() == "1":
                     counting = True
                     num = 1
+
                 line = f.readline()
                 continue
 
@@ -97,7 +99,7 @@ def tokenize( fname ):
     
     parsed_words = []
 
-    with open(fname, "r") as f:
+    with open(fname, "r", encoding="utf-8", errors="ignore" ) as f:
         text = f.read()
     lines = text.split( "\n" )
     alpha_lines = []
