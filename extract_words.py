@@ -29,6 +29,8 @@ except OSError as e:
         raise e
 
 TIMESTAMP_REGEX = "[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}"
+NON_ALPHABET_REGEX = "[^a-zA-Z']"
+
 
 def srt_sentences( fpath ):
     """
@@ -126,11 +128,14 @@ def count( wordlist ):
     total_words = 0
     word_counter = {}
     for token in wordlist:
-        if token.lemma_.lower() not in word_counter:
-            word_counter[ token.lemma_.lower() ] = 1
+        # lemmatize, filter out things like attached dashes, change to lowercase
+        lemma = re.sub( NON_ALPHABET_REGEX, "", token.lemma_.lower() )
+
+        if lemma not in word_counter:
+            word_counter[ lemma ] = 1
         else:
-            word_counter[ token.lemma_.lower() ] =\
-            word_counter[ token.lemma_.lower() ] + 1
+            word_counter[ lemma ] =\
+            word_counter[ lemma ] + 1
     
         total_words += 1
         
@@ -183,10 +188,13 @@ def word_sentence_ids( fpath, cache_path="" ):
                ( token.text == "\n" ):
                 continue
 
-            if token.lemma_.lower() in word_sentence_ids:
-                word_sentence_ids[ token.lemma_.lower() ].append( i )
+            # lemmatize, filter out things like attached dashes, change to lowercase
+            lemma = re.sub( NON_ALPHABET_REGEX, "", token.lemma_.lower() )
+
+            if lemma in word_sentence_ids:
+                word_sentence_ids[ lemma ].append( i )
             else:
-                 word_sentence_ids[ token.lemma_.lower() ] = [ i ]
+                 word_sentence_ids[ lemma ] = [ i ]
             total_words += 1
 
     # the total number of words in the file has special key
