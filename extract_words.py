@@ -9,16 +9,10 @@ import re
 from progress.bar import Bar
 from joblib import Parallel, delayed
 
+TIMESTAMP_REGEX = "[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}"
+NON_ALPHABET_REGEX = "[^a-zA-Z']"
+
 # load English language model
-
-# here you may get this error:
-# '''
-# [E050] Can't find model 'en_core_web_sm'. It doesn't seem to be a Python
-# package or a valid path to a data directory.
-# '''
-
-# which simply means you haven't yet downloaded the necessary spaCy model;
-# download the model with 'python -m spacy download en_core_web_sm'
 try:
     nlp = spacy.load("en_core_web_sm")
 except OSError as e:
@@ -27,10 +21,6 @@ except OSError as e:
         nlp = spacy.load("en_core_web_sm")
     else:
         raise e
-
-TIMESTAMP_REGEX = "[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}"
-NON_ALPHABET_REGEX = "[^a-zA-Z']"
-
 
 def srt_sentences( fpath ):
     """
