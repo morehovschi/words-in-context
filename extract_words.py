@@ -158,6 +158,56 @@ def analyze_file( fpath, cache_path='' ):
             
     return counts
 
+def process_dir( dirpath ):
+    """
+    looks at data directory, returns a dictionary with stats keyed by file
+    """
+    time0 = time.time()
+
+    # count words in each srt file in parallel and output results to json files
+    analyzables = []
+    for fname in os.listdir( dirpath ):
+        if fname.endswith( '.srt' ):
+            analyzables.append( fname )
+    Parallel( n_jobs=1 )( delayed( analyze_file )( dirpath + fname , 'data/' )
+                        for fname in Bar( 'Counting words in files' ).iter( analyzables ) )
+    print( 'elapsed:', time.time() - time0, "\n" )
+
+    # dictionary of word count dictionaries for all files in dirpath dir
+    corpus_counts = {}
+    for fname in os.listdir( dirpath ):
+        if fname.endswith( '.json' ):
+            with open( dirpath + fname ) as json_file:
+                corpus_counts[ separate_fpath( fname )[ 1 ] ] = json.load( json_file )
+
+    # iterate through each word in each doc and calculate statistics
+    for doc_name, doc in corpus_counts.items():
+        for word in doc:
+            if word == "__total__":
+                continue
+
+            word_stats = {}
+
+            word_stats[ 'count' ] = doc[ word ]
+            word_stats[ 'words_in_doc' ] = doc[ '__total__']
+            word_stats[ 'frequency' ] = word_stats[ 'count' ] /\
+                                            word_stats[ 'words_in_doc' ]
+            word_stats[ 'word_occs_in_docs' ] = 1
+
+            for other_doc_name, other_doc in corpus_counts.items():
+                if other_doc_name == doc_name:
+                    continue
+                elif word in other_doc:
+                    word_stats[ 'word_occs_in_docs' ] += 1
+
+            word_stats[ 'tf-idf' ] = word_stats[ 'frequency' ] *\
+            math.log( len( corpus_counts ) / word_stats[ 'word_occs_in_docs' ] )
+
+            # replace word count in doc with dictionary of more detailed statistics
+            corpus_counts[ doc_name ][ word ] =  word_stats
+
+    return corpus_counts
+
 def word_sentence_ids( fpath, cache_path="" ):
     """
     TODO:
@@ -228,55 +278,8 @@ if __name__ == "__main__":
         
     data_path = 'data/'
 
-    time0 = time.time()
-
-    # count words in each srt file in parallel and output results to json files
-    analyzables = []
-    for fname in os.listdir( data_path ):
-        if fname.endswith( '.srt' ):
-            analyzables.append( fname )
-    Parallel( n_jobs=1 )( delayed( analyze_file )( data_path + fname , 'data/' )
-                        for fname in Bar( 'Counting words in files' ).iter( analyzables ) )
-    print( 'elapsed:', time.time() - time0 )
-    
-    print()
-        
     # dictionary of word count dictionaries for all files in data_path dir
-    corpus_counts = {}
-    wordcount_fnames = []
-    for fname in os.listdir( data_path ):
-        if fname.endswith( '.json' ):
-            with open( data_path + fname ) as json_file:
-                corpus_counts[ separate_fpath( fname )[ 1 ] ] = json.load( json_file )
-
-    # iterate through each word in each doc and calculate statistics
-    doc_names = list( corpus_counts.keys() )
-    for i in range( len( doc_names ) ):
-        doc = corpus_counts[ doc_names[ i ] ]
-        
-        for word in doc:
-            if word == "__total__":
-                continue
-            
-            word_stats = {}
-            
-            word_stats[ 'count' ] = doc[ word ]
-            word_stats[ 'words_in_doc' ] = doc[ '__total__']
-            word_stats[ 'frequency' ] = word_stats[ 'count' ] /\
-                                            word_stats[ 'words_in_doc' ]
-            word_stats[ 'word_occs_in_docs' ] = 1
-            
-            for j in range( len( doc_names ) ):
-                if j == i:
-                    continue
-                elif word in corpus_counts[ doc_names[ j ] ]:
-                    word_stats[ 'word_occs_in_docs' ] += 1
-                    
-            word_stats[ 'tf-idf' ] = word_stats[ 'frequency' ] *\
-            math.log( len( doc_names ) / word_stats[ 'word_occs_in_docs' ] )
-            
-            # replace word count in doc with dictionary of more detailed statistics
-            corpus_counts[ doc_names[ i ] ][ word ] =  word_stats
+    corpus_counts = process_dir( data_path )
 
     # extract the stats for the current doc
     file = separate_fpath( file )[ 1 ]
