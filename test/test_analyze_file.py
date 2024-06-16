@@ -7,7 +7,12 @@ nlp = spacy.load("en_core_web_sm")
 # sys path manipulation necessary for importing function defined in parent dir
 import os, sys
 sys.path.insert( 0, os.getcwd() ) 
-from extract_words import analyze_file, analyze_file_sentence_ids, separate_fpath
+from extract_words import (
+    analyze_file,
+    analyze_file_sentence_ids,
+    separate_fpath,
+    get_doc_word_stats
+)
 
 class TestAnalyzeFile( unittest.TestCase ):
 
@@ -99,6 +104,32 @@ class TestAnalyzeFile( unittest.TestCase ):
         self._test_similarity_for_file( "its-a-wonderful-life-1946.srt" )
         self._test_similarity_for_file( "penny-serenade-1941.srt" )
 
+    def test_tf_idf_similarity( self ):
+        """
+        basic test that checks the parity for the top 120 (sorted by tf-idf) results
+        for the 2 analyzers, based on the example "detour-1945.srt". The test also
+        checks that the full sets of results are not entirely identical (this is a
+        sanity check that two different analyzers are used).
+
+        Note: this test is not guaranteed to work for other .srt files, because in
+        others, the small difference may occur in some of the top 120 words, which
+        will lead to the first assertion to fail.
+
+        The purpose of the test is not to ensure complete parity given any .srt
+        file, but rather to make sure that the workflow using the new analyzer does
+        not suffer from major bugs (which would be visible as significant
+        differences in the sets).
+        """
+        wordcount_stats = get_doc_word_stats( "data/", "detour-1945", False )
+        wsid_stats = get_doc_word_stats( "data/", "detour-1945", True )
+
+        # check that results for the top 120 words are identical for the 2 analyzers
+        self.assertCountEqual( wordcount_stats[ :120 ], wsid_stats[ :120 ] )
+
+        # sanity check: the full stats for the 2 analyzers for this doc are slightly
+        # different, because of minor differences in how spacy.nlp lemmatizes
+        # certain words depending on the context
+        self.assertNotEqual( wordcount_stats, wsid_stats )
 
 if __name__ == '__main__':
     unittest.main()

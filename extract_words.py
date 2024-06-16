@@ -311,10 +311,10 @@ if __name__ == "__main__":
     	exit( 0 )
 
     data_dir_path = 'data/'
-    fname_srt = separate_fpath( fname_srt )[ 1 ]
+    fname = separate_fpath( fname_srt )[ 1 ]
 
     # extract stats for the current doc and sort by tf-idf descendingly
-    doc_word_stats = get_doc_word_stats( data_dir_path, fname_srt, True )
+    doc_word_stats = get_doc_word_stats( data_dir_path, fname, True )
 
     for i in range( ( min( WORDS_TO_PRINT, len( doc_word_stats ) ) ) ):
         print( '%d. "%s". count in doc: %d. docs containing word: %d.' % ( i + 1 , 
