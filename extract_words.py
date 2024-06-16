@@ -289,9 +289,40 @@ def get_doc_word_stats( data_path, file, use_word_sentence_ids=False ):
         # replace word count in doc with dictionary of more detailed statistics
         doc_word_stats.append(  ( word, word_stats ) )
 
-    # sort words in doc by tf-idf descendingly
-    return sorted( doc_word_stats, key=lambda tup: tup[ 1 ][ 'tf-idf' ],
-                   reverse=True )
+    # sort words in doc by tf-idf and prepend None so that indexing starts at 1
+    doc_word_stats = [ None ] +\
+        sorted( doc_word_stats, key=lambda tup: tup[ 1 ][ 'tf-idf' ], reverse=True )
+    return doc_word_stats
+
+def main_menu( num_words, fname, doc_word_stats ):
+
+
+    for i in range( 1, ( min( num_words, len( doc_word_stats ) ) + 1 ) ):
+        print( '%d. "%s". count in doc: %d. docs containing word: %d.' % (
+                i, doc_word_stats[ i ][ 0 ],
+                doc_word_stats[ i ][ 1 ][ 'count' ],
+                doc_word_stats[ i ][ 1 ][ 'word_occs_in_docs' ] ),
+            'tf-idf:', '{:.2E}'.format( doc_word_stats[ i ][ 1 ][ 'tf-idf' ] ) )
+
+    print( "\nSelect a word from the list by introducing its \
+number and hitting enter/return. Occurrences of it in the subtitle file \
+will be displayed. \nChange number of displayed words: n\nQuit: q\n" )
+
+    while True:
+        action = input().strip()
+
+        if action.isnumeric() and int( action ) > 0 and int( action ) <= num_words:
+            print( "Yes! Number is in range" )
+        elif action.isnumeric():
+            print( "Invalid number. Please try again" )
+        elif action.lower() == "n":
+            print( "Changing the number of words to display is unavailable yet,\
+but coming soon. Thanks for your patience!" )
+        elif action.lower() == "q":
+            print( "Bye now!" )
+            return
+        else:
+            print( "Selection not understood – please try again" )
     
 if __name__ == "__main__":
     if len( sys.argv ) < 2:
@@ -301,9 +332,9 @@ if __name__ == "__main__":
         fname_srt = sys.argv[ 1 ]
         
     if len( sys.argv ) < 3:
-        WORDS_TO_PRINT = 20
+        num_words = 20
     else:
-        WORDS_TO_PRINT = int( sys.argv[ 2 ] )
+        num_words = int( sys.argv[ 2 ] )
 
     if "--help" in sys.argv:
     	print(f"USAGE: python3 { sys.argv[ 0 ] }" +
@@ -316,9 +347,5 @@ if __name__ == "__main__":
     # extract stats for the current doc and sort by tf-idf descendingly
     doc_word_stats = get_doc_word_stats( data_dir_path, fname, True )
 
-    for i in range( ( min( WORDS_TO_PRINT, len( doc_word_stats ) ) ) ):
-        print( '%d. "%s". count in doc: %d. docs containing word: %d.' % ( i + 1 , 
-                                                doc_word_stats[ i ][ 0 ], 
-                                                doc_word_stats[ i ][ 1 ][ 'count' ], 
-                                                doc_word_stats[ i ][ 1 ][ 'word_occs_in_docs' ] ),
-             'tf-idf:', '{:.2E}'.format( doc_word_stats[ i ][ 1 ][ 'tf-idf' ] ) )
+    main_menu( num_words, fname, doc_word_stats )
+
