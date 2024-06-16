@@ -28,7 +28,7 @@ def srt_sentences( fpath ):
     item's index matches the srt line number
     """
 
-    sentences = [ "" ]  # first item empty so that indices match srt line numbers
+    sentences = []
     with open( fpath, "r", encoding="utf-8", errors="ignore" ) as f:
         counting = False
         num = None
@@ -38,11 +38,15 @@ def srt_sentences( fpath ):
         line = f.readline()
         while line:
             if not counting:
-                # potentially remove utf 65279, found once at the beginning of file
-                line = line.replace( chr( 65279 ), "" )
-                if line.strip() == "1":
+                # potentially remove utf 65279, found once at the beginning of the
+                # file and any newline characters or spaces
+                line = line.replace( chr( 65279 ), "" ).strip()
+                if line.isnumeric():
                     counting = True
-                    num = 1
+                    num = int( line )
+                    # add $num empty items at the beginning so that sentence indices
+                    # in the list match sentence numbers in the file
+                    sentences += [ "" ] * num
 
                 line = f.readline()
                 continue
@@ -83,6 +87,10 @@ def separate_fpath( fpath ):
     dir_path = fpath[ :fpath.rfind( '/' ) + 1 ]
     fname = fpath[ fpath.rfind( '/' ) + 1:fpath.find( '.' ) ]
     extension = fpath[ fpath.find( '.' ): ]
+
+    # "_wsid" is a temporary suffix for use while transitioning to the new method of
+    # counting words in a file
+    fname = fname.replace( "_wsid", "" )
     
     return dir_path, fname, extension
 
@@ -158,67 +166,6 @@ def analyze_file( fpath, cache_path='' ):
             
     return counts
 
-def process_dir( dirpath ):
-    """
-    Looks at data directory and counts occurrences of all words in all files and
-    stores the counts for each source file as json. If json already available, skips
-    the counting step.
-    """
-    time0 = time.time()
-
-    # count words in each srt file in parallel and output results to json files
-    analyzables = []
-    for fname in os.listdir( dirpath ):
-        if fname.endswith( '.srt' ):
-            analyzables.append( fname )
-    Parallel( n_jobs=1 )( delayed( analyze_file )( dirpath + fname , 'data/' )
-                        for fname in Bar( 'Counting words in files' ).iter( analyzables ) )
-    print( 'elapsed:', time.time() - time0, "\n" )
-
-    # dictionary of word count dictionaries for all files in dirpath dir
-    corpus_counts = {}
-    for fname in os.listdir( dirpath ):
-        if fname.endswith( '.json' ):
-            with open( dirpath + fname ) as json_file:
-                corpus_counts[ separate_fpath( fname )[ 1 ] ] = json.load( json_file )
-
-    return corpus_counts
-
-def get_doc_word_stats( corpus_counts, file ):
-    """
-    TODO:
-    """
-    doc_word_stats = []
-    doc = corpus_counts[ file ]
-
-    for word in doc:
-        if word == "__total__":
-            continue
-
-        word_stats = {}
-
-        word_stats[ 'count' ] = doc[ word ]
-        word_stats[ 'words_in_doc' ] = doc[ '__total__']
-        word_stats[ 'frequency' ] = word_stats[ 'count' ] /\
-                                        word_stats[ 'words_in_doc' ]
-        word_stats[ 'word_occs_in_docs' ] = 1
-
-        for other_doc_name, other_doc in corpus_counts.items():
-            if other_doc_name == file:
-                continue
-            elif word in other_doc:
-                word_stats[ 'word_occs_in_docs' ] += 1
-
-        word_stats[ 'tf-idf' ] = word_stats[ 'frequency' ] *\
-            math.log( len( corpus_counts ) / word_stats[ 'word_occs_in_docs' ] )
-
-        # replace word count in doc with dictionary of more detailed statistics
-        doc_word_stats.append(  ( word, word_stats ) )
-
-    # sort words in doc by tf-idf descendingly
-    return sorted( doc_word_stats, key=lambda tup: tup[ 1 ][ 'tf-idf' ],
-                   reverse=True )
-
 def word_sentence_ids( fpath, cache_path="" ):
     """
     TODO:
@@ -269,13 +216,89 @@ def analyze_file_sentence_ids( fpath, cache_path="" ):
             with open( cache_path + fname + '_wsid.json' , 'w' ) as json_file:
                 json.dump( wsid, json_file )
 
+def process_dir( dirpath, use_word_sentence_ids ):
+    """
+    Looks at data directory and counts occurrences of all words in all files and
+    stores the counts for each source file as json. If json already available, skips
+    the counting step.
+    """
+    time0 = time.time()
+
+    analyzer_func =\
+         analyze_file_sentence_ids if use_word_sentence_ids else analyze_file
+
+    # count words in each srt file in parallel and output results to json files
+    analyzables = []
+    for fname in os.listdir( dirpath ):
+        if fname.endswith( '.srt' ):
+            analyzables.append( fname )
+    Parallel( n_jobs=1 )( delayed( analyzer_func )( dirpath + fname , 'data/' )
+                        for fname in Bar( 'Counting words in files' ).iter( analyzables ) )
+    print( 'elapsed:', time.time() - time0, "\n" )
+
+    # dictionary of word count dictionaries for all files in dirpath dir
+    corpus_counts = {}
+
+    dir_filenames = []
+    for fname in os.listdir( dirpath ):
+        if not fname.endswith( ".json" ):
+            continue
+
+        if ( use_word_sentence_ids and ( "wsid" not in fname ) or
+             ( not use_word_sentence_ids ) and ( "wsid" in fname ) ):
+            continue
+
+        with open( dirpath + fname ) as json_file:
+            corpus_counts[ separate_fpath( fname )[ 1 ] ] = \
+                json.load( json_file )
+
+    return corpus_counts
+
+def get_doc_word_stats( data_path, file, use_word_sentence_ids=False ):
+    """
+    TODO:
+    """
+    # dictionary of word count dictionaries for all files in data_path dir
+    corpus_counts = process_dir( data_path, use_word_sentence_ids )
+
+    doc_word_stats = []
+    doc = corpus_counts[ file ]
+
+    for word in doc:
+        if word == "__total__":
+            continue
+
+        word_stats = {}
+
+        word_stats[ 'count' ] = \
+            len( doc[ word ] ) if use_word_sentence_ids else doc[ word ]
+        word_stats[ 'words_in_doc' ] = doc[ '__total__']
+        word_stats[ 'frequency' ] = word_stats[ 'count' ] /\
+                                        word_stats[ 'words_in_doc' ]
+        word_stats[ 'word_occs_in_docs' ] = 1
+
+        for other_doc_name, other_doc in corpus_counts.items():
+            if other_doc_name == file:
+                continue
+            elif word in other_doc:
+                word_stats[ 'word_occs_in_docs' ] += 1
+
+        word_stats[ 'tf-idf' ] = word_stats[ 'frequency' ] *\
+            math.log( len( corpus_counts ) / word_stats[ 'word_occs_in_docs' ] )
+
+        # replace word count in doc with dictionary of more detailed statistics
+        doc_word_stats.append(  ( word, word_stats ) )
+
+    # sort words in doc by tf-idf descendingly
+    return sorted( doc_word_stats, key=lambda tup: tup[ 1 ][ 'tf-idf' ],
+                   reverse=True )
     
 if __name__ == "__main__":
     if len( sys.argv ) < 2:
         # expected format for name of subtitle files
-        file = 'its-a-wonderful-life-1946.srt'
+        fname_srt = 'its-a-wonderful-life-1946.srt'
     else:
-        file = sys.argv[ 1 ]
+        fname_srt = sys.argv[ 1 ]
         
     if len( sys.argv ) < 3:
         WORDS_TO_PRINT = 20
@@ -286,15 +309,12 @@ if __name__ == "__main__":
     	print(f"USAGE: python3 { sys.argv[ 0 ] }" +
     		   " <name of .srt file in data/> <num words>" )
     	exit( 0 )
-        
-    data_path = 'data/'
 
-    # dictionary of word count dictionaries for all files in data_path dir
-    corpus_counts = process_dir( data_path )
+    data_dir_path = 'data/'
+    fname_srt = separate_fpath( fname_srt )[ 1 ]
 
     # extract stats for the current doc and sort by tf-idf descendingly
-    file = separate_fpath( file )[ 1 ]
-    doc_word_stats = get_doc_word_stats( corpus_counts, file )
+    doc_word_stats = get_doc_word_stats( data_dir_path, fname_srt, True )
 
     for i in range( ( min( WORDS_TO_PRINT, len( doc_word_stats ) ) ) ):
         print( '%d. "%s". count in doc: %d. docs containing word: %d.' % ( i + 1 , 
