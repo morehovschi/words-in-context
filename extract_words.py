@@ -275,12 +275,10 @@ def get_doc_word_stats( data_path, file, use_word_sentence_ids=False ):
         word_stats[ 'words_in_doc' ] = doc[ '__total__']
         word_stats[ 'frequency' ] = word_stats[ 'count' ] /\
                                         word_stats[ 'words_in_doc' ]
-        word_stats[ 'word_occs_in_docs' ] = 1
+        word_stats[ 'word_occs_in_docs' ] = 0
 
         for other_doc_name, other_doc in corpus_counts.items():
-            if other_doc_name == file:
-                continue
-            elif word in other_doc:
+            if word in other_doc:
                 word_stats[ 'word_occs_in_docs' ] += 1
 
         word_stats[ 'tf-idf' ] = word_stats[ 'frequency' ] *\
@@ -304,9 +302,8 @@ def main_menu( num_words, fname, doc_word_stats ):
                 doc_word_stats[ i ][ 1 ][ 'word_occs_in_docs' ] ),
             'tf-idf:', '{:.2E}'.format( doc_word_stats[ i ][ 1 ][ 'tf-idf' ] ) )
 
-    print( "\nSelect a word from the list by introducing its \
-number and hitting enter/return. Occurrences of it in the subtitle file \
-will be displayed. \nChange number of displayed words: n\nQuit: q\n" )
+    print( f"\nOptions:\n-Select a word [1-{num_words}] to see contextual examples"\
+            "\n-Change number of displayed words: n\n-Quit: q\n" )
 
     while True:
         action = input().strip()
@@ -314,10 +311,10 @@ will be displayed. \nChange number of displayed words: n\nQuit: q\n" )
         if action.isnumeric() and int( action ) > 0 and int( action ) <= num_words:
             print( "Yes! Number is in range" )
         elif action.isnumeric():
-            print( "Invalid number. Please try again" )
+            print( "Invalid number. Please try again\n" )
         elif action.lower() == "n":
-            print( "Changing the number of words to display is unavailable yet,\
-but coming soon. Thanks for your patience!" )
+            print( "Changing the number of words to display is unavailable, "\
+                   "but coming soon. Thanks for your patience!" )
         elif action.lower() == "q":
             print( "Bye now!" )
             return
