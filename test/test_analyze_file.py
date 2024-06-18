@@ -123,6 +123,16 @@ class TestAnalyzeFile( unittest.TestCase ):
         wordcount_stats = get_doc_word_stats( "data/", "detour-1945", False )
         wsid_stats = get_doc_word_stats( "data/", "detour-1945", True )
 
+        # delete the data for word occurrence ids, as this information is only
+        # meaningful in the wsid_stats collection
+        # (first element is None in both, skip it)
+        for i in range( len( wsid_stats ) ):
+            if i == 0:
+                continue
+
+            del wordcount_stats[ i ][ 1 ][ "word_occ_ids" ]
+            del wsid_stats[ i ][ 1 ][ "word_occ_ids" ]
+
         # check that results for the top 120 words are identical for the 2 analyzers
         self.assertCountEqual( wordcount_stats[ :120 ], wsid_stats[ :120 ] )
 

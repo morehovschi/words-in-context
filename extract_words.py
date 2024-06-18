@@ -276,6 +276,7 @@ def get_doc_word_stats( data_path, file, use_word_sentence_ids=False ):
         word_stats[ 'frequency' ] = word_stats[ 'count' ] /\
                                         word_stats[ 'words_in_doc' ]
         word_stats[ 'word_occs_in_docs' ] = 0
+        word_stats[ 'word_occ_ids' ] = doc[ word ]
 
         for other_doc_name, other_doc in corpus_counts.items():
             if word in other_doc:
@@ -292,34 +293,66 @@ def get_doc_word_stats( data_path, file, use_word_sentence_ids=False ):
         sorted( doc_word_stats, key=lambda tup: tup[ 1 ][ 'tf-idf' ], reverse=True )
     return doc_word_stats
 
-def main_menu( num_words, fname, doc_word_stats ):
+def word_occurrence_menu( word, occ_ids, sentences ):
+    """
+    TODO:
+    """
+    print( f"Displaying occurrences of \"{word}\":" )
+    for i, idx in enumerate( occ_ids ):
+        print( f"{ i + 1 }. \"{ sentences[ idx ] }\"" )
+    print( "Back: b" )
 
+    while True:
+        action = input().strip()
 
-    for i in range( 1, ( min( num_words, len( doc_word_stats ) ) + 1 ) ):
-        print( '%d. "%s". count in doc: %d. docs containing word: %d.' % (
-                i, doc_word_stats[ i ][ 0 ],
-                doc_word_stats[ i ][ 1 ][ 'count' ],
-                doc_word_stats[ i ][ 1 ][ 'word_occs_in_docs' ] ),
-            'tf-idf:', '{:.2E}'.format( doc_word_stats[ i ][ 1 ][ 'tf-idf' ] ) )
+        if action.lower() == "b":
+            return
+        else:
+            print( "Selection not understood – please try again" )
 
-    print( f"\nOptions:\n-Select a word [1-{num_words}] to see contextual examples"\
-            "\n-Change number of displayed words: n\n-Quit: q\n" )
+def main_menu( num_words, fname, sentences, doc_word_stats ):
+    """
+    TODO:
+    """
+
+    def print_words():
+        for i in range( 1, ( min( num_words, len( doc_word_stats ) ) + 1 ) ):
+            print( '%d. "%s". count in doc: %d. docs containing word: %d.' % (
+                    i, doc_word_stats[ i ][ 0 ],
+                    doc_word_stats[ i ][ 1 ][ 'count' ],
+                    doc_word_stats[ i ][ 1 ][ 'word_occs_in_docs' ] ),
+                'tf-idf:', '{:.2E}'.format( doc_word_stats[ i ][ 1 ][ 'tf-idf' ] ) )
+    def print_instructions():
+        print( f"\nOptions:\n-Select a word [1-{num_words}] to see contextual"\
+                " examples\n-Change number of displayed words: n\n-Display word "\
+                "list: l\n-Quit: q\n" )
+
+    print_words()
+    print_instructions()
 
     while True:
         action = input().strip()
 
         if action.isnumeric() and int( action ) > 0 and int( action ) <= num_words:
-            print( "Yes! Number is in range" )
+            idx = int( action )
+            word_occurrence_menu( doc_word_stats[ idx ][ 0 ],
+                                  doc_word_stats[ idx ][ 1 ][ "word_occ_ids"],
+                                  sentences )
+            print_instructions()
+
         elif action.isnumeric():
             print( "Invalid number. Please try again\n" )
         elif action.lower() == "n":
             print( "Changing the number of words to display is unavailable, "\
                    "but coming soon. Thanks for your patience!" )
+        elif action.lower() == "l":
+            print_words()
         elif action.lower() == "q":
             print( "Bye now!" )
             return
         else:
-            print( "Selection not understood – please try again" )
+            print( "Selection not understood – please try again (type a word's "\
+                   "number in the list above, not the word itself)" )
     
 if __name__ == "__main__":
     if len( sys.argv ) < 2:
@@ -341,8 +374,10 @@ if __name__ == "__main__":
     data_dir_path = 'data/'
     fname = separate_fpath( fname_srt )[ 1 ]
 
+    sentences = srt_sentences( data_dir_path + fname_srt )
+
     # extract stats for the current doc and sort by tf-idf descendingly
     doc_word_stats = get_doc_word_stats( data_dir_path, fname, True )
 
-    main_menu( num_words, fname, doc_word_stats )
+    main_menu( num_words, fname, sentences, doc_word_stats)
 
