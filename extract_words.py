@@ -35,10 +35,6 @@ def separate_fpath( fpath ):
     fname = fpath[ fpath.rfind( '/' ) + 1:fpath.find( '.' ) ]
     extension = fpath[ fpath.find( '.' ): ]
 
-    # "_wsid" is a temporary suffix for use while transitioning to the new method of
-    # counting words in a file
-    fname = fname.replace( "_wsid", "" )
-
     return dir_path, fname, extension
 
 def srt_sentences( fpath ):
@@ -132,7 +128,7 @@ def analyze_file_sentence_ids( fpath, cache_path="" ):
     fname = fpath[ fpath.rfind( '/' )+1:fpath.find( '.' ) ]
 
     try:
-        with open( cache_path + fname + '_wsid.json' ) as json_file:
+        with open( cache_path + fname + '.json' ) as json_file:
             counts = json.load( json_file )
 
     except FileNotFoundError:
@@ -140,7 +136,7 @@ def analyze_file_sentence_ids( fpath, cache_path="" ):
 
         # if cache path provided, store the counter dictionary
         if cache_path:
-            with open( cache_path + fname + '_wsid.json' , 'w' ) as json_file:
+            with open( cache_path + fname + '.json' , 'w' ) as json_file:
                 json.dump( wsid, json_file )
 
 def process_dir( dirpath ):
@@ -166,9 +162,6 @@ def process_dir( dirpath ):
     dir_filenames = []
     for fname in os.listdir( dirpath ):
         if not fname.endswith( ".json" ):
-            continue
-
-        if "wsid" not in fname:
             continue
 
         with open( dirpath + fname ) as json_file:
