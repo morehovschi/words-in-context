@@ -14,13 +14,32 @@ NON_ALPHABET_REGEX = "[^a-zA-Z']"
 
 # load English language model
 try:
-    nlp = spacy.load("en_core_web_sm")
+    nlp = spacy.load( "en_core_web_sm" )
 except OSError as e:
     if "Can't find model" in str( e ):
         spacy.cli.download( "en_core_web_sm" )
-        nlp = spacy.load("en_core_web_sm")
+        nlp = spacy.load( "en_core_web_sm" )
     else:
         raise e
+
+def has_alpha( string ):
+    for char in string:
+        if char.isalpha():
+            return True
+    return False
+
+def separate_fpath( fpath ):
+    """ convenience method to separate directory name, file name and extension """
+
+    dir_path = fpath[ :fpath.rfind( '/' ) + 1 ]
+    fname = fpath[ fpath.rfind( '/' ) + 1:fpath.find( '.' ) ]
+    extension = fpath[ fpath.find( '.' ): ]
+
+    # "_wsid" is a temporary suffix for use while transitioning to the new method of
+    # counting words in a file
+    fname = fname.replace( "_wsid", "" )
+
+    return dir_path, fname, extension
 
 def srt_sentences( fpath ):
     """
@@ -74,98 +93,6 @@ def srt_sentences( fpath ):
 
     return sentences
 
-
-def has_alpha( string ):
-    for char in string:
-        if char.isalpha():
-            return True
-    return False    
-
-def separate_fpath( fpath ):
-    """ convenience method to separate directory name, file name and extension """
-    
-    dir_path = fpath[ :fpath.rfind( '/' ) + 1 ]
-    fname = fpath[ fpath.rfind( '/' ) + 1:fpath.find( '.' ) ]
-    extension = fpath[ fpath.find( '.' ): ]
-
-    # "_wsid" is a temporary suffix for use while transitioning to the new method of
-    # counting words in a file
-    fname = fname.replace( "_wsid", "" )
-    
-    return dir_path, fname, extension
-
-def tokenize( fname ):
-    """ extract words without punctuation and other symbols """
-    
-    parsed_words = []
-
-    with open(fname, "r", encoding="utf-8", errors="ignore" ) as f:
-        text = f.read()
-    lines = text.split( "\n" )
-    alpha_lines = []
-
-    # filter out lines with no alphabets
-    for line in lines:
-        if has_alpha( line ):
-            alpha_lines.append( line)
-    alpha_lines = "\n".join( alpha_lines )
-     
-    doc = nlp( alpha_lines )
-    
-    for token in doc:
-        if ( token.is_punct ) or ( token is None ) or ( token.text == ' ') or\
-           ( token.text == "\n" ):
-            continue
-        
-        parsed_words.append( token )
-    
-    return parsed_words
-
-def count( wordlist ):
-    """ count the occurrence of each word in the wordlist """
-    total_words = 0
-    word_counter = {}
-    for token in wordlist:
-        # lemmatize, filter out things like attached dashes, change to lowercase
-        lemma = re.sub( NON_ALPHABET_REGEX, "", token.lemma_.lower() )
-
-        if lemma not in word_counter:
-            word_counter[ lemma ] = 1
-        else:
-            word_counter[ lemma ] =\
-            word_counter[ lemma ] + 1
-    
-        total_words += 1
-        
-    return word_counter, total_words
-
-def analyze_file( fpath, cache_path='' ):
-    """ uses helper methods to count words in an input file
-    
-    input: path to file to be analyzed
-    output: dictionary of words (keys) and each unique word's number of occurrences (values)
-    """
-    counts, total_words = None, None
-    
-    fname = fpath[ fpath.rfind( '/' )+1:fpath.find( '.' ) ]
-    
-    try:
-        with open( cache_path + fname + '.json' ) as json_file:
-            counts = json.load( json_file )
-
-    except FileNotFoundError:
-        tokens = tokenize( fpath )
-        counts, total_words = count( tokens )
-
-        counts[ '__total__' ] = total_words
-        
-        # if cache path provided, store the counter dictionary
-        if cache_path:
-            with open( cache_path + fname + '.json' , 'w' ) as json_file:
-                json.dump( counts, json_file )
-            
-    return counts
-
 def word_sentence_ids( fpath, cache_path="" ):
     """
     TODO:
@@ -216,7 +143,7 @@ def analyze_file_sentence_ids( fpath, cache_path="" ):
             with open( cache_path + fname + '_wsid.json' , 'w' ) as json_file:
                 json.dump( wsid, json_file )
 
-def process_dir( dirpath, use_word_sentence_ids ):
+def process_dir( dirpath ):
     """
     Looks at data directory and counts occurrences of all words in all files and
     stores the counts for each source file as json. If json already available, skips
@@ -224,15 +151,12 @@ def process_dir( dirpath, use_word_sentence_ids ):
     """
     time0 = time.time()
 
-    analyzer_func =\
-         analyze_file_sentence_ids if use_word_sentence_ids else analyze_file
-
     # count words in each srt file in parallel and output results to json files
     analyzables = []
     for fname in os.listdir( dirpath ):
         if fname.endswith( '.srt' ):
             analyzables.append( fname )
-    Parallel( n_jobs=1 )( delayed( analyzer_func )( dirpath + fname , 'data/' )
+    Parallel( n_jobs=1 )( delayed( analyze_file_sentence_ids )( dirpath + fname , 'data/' )
                         for fname in Bar( 'Counting words in files' ).iter( analyzables ) )
     print( 'elapsed:', time.time() - time0, "\n" )
 
@@ -244,8 +168,7 @@ def process_dir( dirpath, use_word_sentence_ids ):
         if not fname.endswith( ".json" ):
             continue
 
-        if ( use_word_sentence_ids and ( "wsid" not in fname ) or
-             ( not use_word_sentence_ids ) and ( "wsid" in fname ) ):
+        if "wsid" not in fname:
             continue
 
         with open( dirpath + fname ) as json_file:
@@ -254,12 +177,12 @@ def process_dir( dirpath, use_word_sentence_ids ):
 
     return corpus_counts
 
-def get_doc_word_stats( data_path, file, use_word_sentence_ids=False ):
+def get_doc_word_stats( data_path, file ):
     """
     TODO:
     """
     # dictionary of word count dictionaries for all files in data_path dir
-    corpus_counts = process_dir( data_path, use_word_sentence_ids )
+    corpus_counts = process_dir( data_path )
 
     doc_word_stats = []
     doc = corpus_counts[ file ]
@@ -270,8 +193,7 @@ def get_doc_word_stats( data_path, file, use_word_sentence_ids=False ):
 
         word_stats = {}
 
-        word_stats[ 'count' ] = \
-            len( doc[ word ] ) if use_word_sentence_ids else doc[ word ]
+        word_stats[ 'count' ] = len( doc[ word ] )
         word_stats[ 'words_in_doc' ] = doc[ '__total__']
         word_stats[ 'frequency' ] = word_stats[ 'count' ] /\
                                         word_stats[ 'words_in_doc' ]
@@ -377,9 +299,9 @@ def main( argv ):
     sentences = srt_sentences( data_dir_path + fname_srt )
 
     # extract stats for the current doc and sort by tf-idf descendingly
-    doc_word_stats = get_doc_word_stats( data_dir_path, fname, True )
+    doc_word_stats = get_doc_word_stats( data_dir_path, fname )
 
-    main_menu( num_words, fname, sentences, doc_word_stats)
+    main_menu( num_words, fname, sentences, doc_word_stats )
 
 if __name__ == "__main__":
     main( sys.argv )
