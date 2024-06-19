@@ -300,7 +300,7 @@ def word_occurrence_menu( word, occ_ids, sentences ):
     print( f"Displaying occurrences of \"{word}\":" )
     for i, idx in enumerate( occ_ids ):
         print( f"{ i + 1 }. \"{ sentences[ idx ] }\"" )
-    print( "Back: b" )
+    print( "\n-Back: b" )
 
     while True:
         action = input().strip()
@@ -351,25 +351,25 @@ def main_menu( num_words, fname, sentences, doc_word_stats ):
             print( "Bye now!" )
             return
         else:
-            print( "Selection not understood – please try again (type a word's "\
+            print( "Selection not understood – please try again\n(type a word's "\
                    "number in the list above, not the word itself)" )
-    
-if __name__ == "__main__":
-    if len( sys.argv ) < 2:
+
+def main( argv ):
+    if len( argv ) < 2:
         # expected format for name of subtitle files
         fname_srt = 'its-a-wonderful-life-1946.srt'
     else:
-        fname_srt = sys.argv[ 1 ]
+        fname_srt = argv[ 1 ]
         
-    if len( sys.argv ) < 3:
+    if len( argv ) < 3:
         num_words = 20
     else:
-        num_words = int( sys.argv[ 2 ] )
+        num_words = int( argv[ 2 ] )
 
-    if "--help" in sys.argv:
-    	print(f"USAGE: python3 { sys.argv[ 0 ] }" +
+    if "--help" in argv:
+        print( f"USAGE: python3 { argv[ 0 ] }" +
     		   " <name of .srt file in data/> <num words>" )
-    	exit( 0 )
+        exit( 0 )
 
     data_dir_path = 'data/'
     fname = separate_fpath( fname_srt )[ 1 ]
@@ -380,4 +380,7 @@ if __name__ == "__main__":
     doc_word_stats = get_doc_word_stats( data_dir_path, fname, True )
 
     main_menu( num_words, fname, sentences, doc_word_stats)
+
+if __name__ == "__main__":
+    main( sys.argv )
 
