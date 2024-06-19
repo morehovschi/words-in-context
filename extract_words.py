@@ -1,3 +1,13 @@
+"""
+This command line app looks through a set of subtitle files (.srt files in data/)
+and, for a chosen document (corresponding to a movie or an episode), displays the
+top N words ranked by TF-IDF. Once a word is chosen, contextual examples of the word
+from the given document are displayed.
+
+The app is intended for language learners who want learn a set of words (as well as
+their associated contexts) ahead of watching the movie or episode.
+"""
+
 import os
 import sys
 import spacy
@@ -89,9 +99,11 @@ def srt_sentences( fpath ):
 
     return sentences
 
-def word_sentence_ids( fpath, cache_path="" ):
+def word_sentence_ids( fpath ):
     """
-    TODO:
+    takes a file path pointing to an srt file and returns a dictionary where words
+    are keys and the values are lists with the numbers of sentences where each key
+    word was encountered
     """
     word_sentence_ids = {}
     sentences = srt_sentences( fpath )
@@ -124,6 +136,10 @@ def word_sentence_ids( fpath, cache_path="" ):
     return word_sentence_ids
 
 def analyze_file_sentence_ids( fpath, cache_path="" ):
+    """
+    tries to open a serialized dictionary of words and the sentence numbers where
+    they occur; if unsuccessful, creates that dictionary and saves it
+    """
 
     fname = fpath[ fpath.rfind( '/' )+1:fpath.find( '.' ) ]
 
@@ -172,7 +188,14 @@ def process_dir( dirpath ):
 
 def get_doc_word_stats( data_path, file ):
     """
-    TODO:
+    given a path to a data directory and the name of a file in it, loads data about
+    word occurrences in all files (or, if unavailable, computes and saves it), and
+    calculates TF-IDF for eaach word in the given file, in relation to all other
+    files.
+
+    the returned object is a list of tuples where [ 0 ] is the word and [ 1 ] is a
+    dictionary of various statistics about this word in the given doc, like TF-IDF,
+    how often the word occurs in this doc, how many other docs it occurs in etc.
     """
     # dictionary of word count dictionaries for all files in data_path dir
     corpus_counts = process_dir( data_path )
@@ -210,7 +233,11 @@ def get_doc_word_stats( data_path, file ):
 
 def word_occurrence_menu( word, occ_ids, sentences ):
     """
-    TODO:
+    this just shows all the occurrences of given $word in the given $sentences, as
+    determined by the list of sentence ids $occ_ids
+
+    implemented as an additional menu/function because its functionality pertaining
+    to a particular word will be expanded soon
     """
     print( f"Displaying occurrences of \"{word}\":" )
     for i, idx in enumerate( occ_ids ):
@@ -227,7 +254,9 @@ def word_occurrence_menu( word, occ_ids, sentences ):
 
 def main_menu( num_words, fname, sentences, doc_word_stats ):
     """
-    TODO:
+    Shows the top $num_words words in the file, as well as associated statistics
+    and gives the user the option to print contextual example sentences for any one
+    of the displayed words.
     """
 
     def print_words():
