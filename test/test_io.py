@@ -1,5 +1,5 @@
 """
-Basic unit test that just simulates some user input and checks that the expected
+Basic unit test that simulates some user input and checks that the expected
 lines are present (based on data file "its-a-wonderful-life-1946.srt").
 """
 
@@ -59,6 +59,16 @@ class TestMainMenuIO( unittest.TestCase ):
     "(type a word's number in the list above, not the word itself)"
 ]
 
+        self._run_test( mock_stdout, expected_lines )
+
+    @patch( "sys.stdout", new_callable=StringIO )
+    @patch( "builtins.input", side_effect=[ "", "n", "-1", "30", "q"] )
+    def test_change_num( self, mock_input, mock_stdout ):
+        expected_lines =[
+    'New number of displayed words: ',
+    'Please enter a valid number (integer >= 1)',
+    '30. "wing". count in doc: 17. docs containing word: 3. tf-idf: 1.16E-03'
+]
         self._run_test( mock_stdout, expected_lines )
 
 if __name__ == "__main__":

@@ -231,10 +231,26 @@ def get_doc_word_stats( data_path, file ):
         sorted( doc_word_stats, key=lambda tup: tup[ 1 ][ 'tf-idf' ], reverse=True )
     return doc_word_stats
 
+def num_displayed_words_menu():
+    """
+    takes in a new number of words to display from user, if input is in acceptable
+    range, returns it; if not, user can try again until a valid number is received
+    """
+    while True:
+        print( "New number of displayed words: ", end="" )
+        new_num = input()
+        print()
+
+        if ( ( not new_num.isnumeric() ) or
+             ( int( new_num ) < 1 ) ):
+            print( "Please enter a valid number (integer >= 1)" )
+        else:
+            return int( new_num )
+
 def word_occurrence_menu( word, occ_ids, sentences ):
     """
-    this just shows all the occurrences of given $word in the given $sentences, as
-    determined by the list of sentence ids $occ_ids
+    shows all the occurrences of given $word in the given $sentences, as determined
+    by the list of sentence ids $occ_ids
 
     implemented as an additional menu/function because its functionality pertaining
     to a particular word will be expanded soon
@@ -259,7 +275,7 @@ def main_menu( num_words, fname, sentences, doc_word_stats ):
     of the displayed words.
     """
 
-    def print_words():
+    def print_words( num_words ):
         for i in range( 1, ( min( num_words, len( doc_word_stats ) ) + 1 ) ):
             print( '%d. "%s". count in doc: %d. docs containing word: %d.' % (
                     i, doc_word_stats[ i ][ 0 ],
@@ -271,7 +287,7 @@ def main_menu( num_words, fname, sentences, doc_word_stats ):
                 " examples\n-Change number of displayed words: n\n-Display word "\
                 "list: l\n-Quit: q\n" )
 
-    print_words()
+    print_words( num_words )
     print_instructions()
 
     while True:
@@ -286,14 +302,20 @@ def main_menu( num_words, fname, sentences, doc_word_stats ):
 
         elif action.isnumeric():
             print( "Invalid number. Please try again\n" )
+
         elif action.lower() == "n":
-            print( "Changing the number of words to display is unavailable, "\
-                   "but coming soon. Thanks for your patience!" )
+            num_words = num_displayed_words_menu()
+
+            print_words( num_words )
+            print_instructions()
+
         elif action.lower() == "l":
-            print_words()
+            print_words( num_words )
+
         elif action.lower() == "q":
             print( "Bye now!" )
             return
+
         else:
             print( "Selection not understood – please try again\n(type a word's "\
                    "number in the list above, not the word itself)" )
