@@ -47,18 +47,18 @@ def separate_fpath( fpath ):
 
     return dir_path, fname, extension
 
-def srt_sentences( fpath ):
+def srt_subtitles( fpath ):
     """
     helper that reads an srt file and returns a list of srt senteces where each
     item's index matches the srt line number
     """
 
-    sentences = []
+    subtitles = []
     with open( fpath, "r", encoding="utf-8", errors="ignore" ) as f:
         counting = False
         num = None
         timestamp = None  # timestamp is only used for validating format
-        sentence = ""
+        subtitle = ""
 
         line = f.readline()
         while line:
@@ -69,9 +69,9 @@ def srt_sentences( fpath ):
                 if line.isnumeric():
                     counting = True
                     num = int( line )
-                    # add $num empty items at the beginning so that sentence indices
-                    # in the list match sentence numbers in the file
-                    sentences += [ "" ] * num
+                    # add $num empty items at the beginning so that subtitle indices
+                    # in the list match subtitle numbers in the file
+                    subtitles += [ "" ] * num
 
                 line = f.readline()
                 continue
@@ -79,42 +79,42 @@ def srt_sentences( fpath ):
             line = line.strip()
 
             if line.isnumeric() and int( line ) == num + 1:
-                sentences.append( sentence.strip() )
+                subtitles.append( subtitle.strip() )
 
                 num +=1
                 timestamp = None
-                sentence = ""
+                subtitle = ""
             elif re.search( TIMESTAMP_REGEX, line ):
                 timestamp = line
             else:
                 if has_alpha( line ) and timestamp:
-                    sentence += line.strip() + " "
+                    subtitle += line.strip() + " "
 
             line = f.readline()
 
-        # if timestamp not None, there is still the last sentence in the file that
+        # if timestamp not None, there is still the last subtitle in the file that
         # has not yet been added to the list
         if timestamp:
-            sentences.append( sentence.strip() )
+            subtitles.append( subtitle.strip() )
 
-    return sentences
+    return subtitles
 
-def word_sentence_ids( fpath ):
+def word_subtitle_ids( fpath ):
     """
     takes a file path pointing to an srt file and returns a dictionary where words
-    are keys and the values are lists with the numbers of sentences where each key
+    are keys and the values are lists with the numbers of subtitles where each key
     word was encountered
     """
-    word_sentence_ids = {}
-    sentences = srt_sentences( fpath )
+    word_subtitle_ids = {}
+    subtitles = srt_subtitles( fpath )
 
     total_words = 0
 
-    for i, sentence in enumerate( sentences ):
-        if not sentence:
+    for i, subtitle in enumerate( subtitles ):
+        if not subtitle:
             continue
 
-        doc = nlp( sentence )
+        doc = nlp( subtitle )
 
         for token in doc:
             if ( token.is_punct ) or ( token is None ) or ( token.text == ' ') or\
@@ -124,20 +124,20 @@ def word_sentence_ids( fpath ):
             # lemmatize, filter out things like attached dashes, change to lowercase
             lemma = re.sub( NON_ALPHABET_REGEX, "", token.lemma_.lower() )
 
-            if lemma in word_sentence_ids:
-                word_sentence_ids[ lemma ].append( i )
+            if lemma in word_subtitle_ids:
+                word_subtitle_ids[ lemma ].append( i )
             else:
-                 word_sentence_ids[ lemma ] = [ i ]
+                 word_subtitle_ids[ lemma ] = [ i ]
             total_words += 1
 
     # the total number of words in the file has special key
-    word_sentence_ids[ "__total__" ] = total_words
+    word_subtitle_ids[ "__total__" ] = total_words
 
-    return word_sentence_ids
+    return word_subtitle_ids
 
-def analyze_file_sentence_ids( fpath, cache_path="" ):
+def analyze_file_subtitle_ids( fpath, cache_path="" ):
     """
-    tries to open a serialized dictionary of words and the sentence numbers where
+    tries to open a serialized dictionary of words and the subtitle numbers where
     they occur; if unsuccessful, creates that dictionary and saves it
     """
 
@@ -148,7 +148,7 @@ def analyze_file_sentence_ids( fpath, cache_path="" ):
             counts = json.load( json_file )
 
     except FileNotFoundError:
-        wsid = word_sentence_ids( fpath )
+        wsid = word_subtitle_ids( fpath )
 
         # if cache path provided, store the counter dictionary
         if cache_path:
@@ -168,7 +168,7 @@ def process_dir( dirpath ):
     for fname in os.listdir( dirpath ):
         if fname.endswith( '.srt' ):
             analyzables.append( fname )
-    Parallel( n_jobs=1 )( delayed( analyze_file_sentence_ids )( dirpath + fname , 'data/' )
+    Parallel( n_jobs=1 )( delayed( analyze_file_subtitle_ids )( dirpath + fname , 'data/' )
                         for fname in Bar( 'Counting words in files' ).iter( analyzables ) )
     print( 'elapsed:', time.time() - time0, "\n" )
 
@@ -247,17 +247,17 @@ def num_displayed_words_menu():
         else:
             return int( new_num )
 
-def word_occurrence_menu( word, occ_ids, sentences ):
+def word_occurrence_menu( word, occ_ids, subtitles ):
     """
-    shows all the occurrences of given $word in the given $sentences, as determined
-    by the list of sentence ids $occ_ids
+    shows all the occurrences of given $word in the given $subtitles, as determined
+    by the list of subtitle ids $occ_ids
 
     implemented as an additional menu/function because its functionality pertaining
     to a particular word will be expanded soon
     """
     print( f"Displaying occurrences of \"{word}\":" )
     for i, idx in enumerate( occ_ids ):
-        print( f"{ i + 1 }. \"{ sentences[ idx ] }\"" )
+        print( f"{ i + 1 }. \"{ subtitles[ idx ] }\"" )
     print( "\n-Back: b" )
 
     while True:
@@ -268,10 +268,10 @@ def word_occurrence_menu( word, occ_ids, sentences ):
         else:
             print( "Selection not understood – please try again" )
 
-def main_menu( num_words, fname, sentences, doc_word_stats ):
+def main_menu( num_words, fname, subtitles, doc_word_stats ):
     """
     Shows the top $num_words words in the file, as well as associated statistics
-    and gives the user the option to print contextual example sentences for any one
+    and gives the user the option to print contextual example subtitles for any one
     of the displayed words.
     """
 
@@ -297,7 +297,7 @@ def main_menu( num_words, fname, sentences, doc_word_stats ):
             idx = int( action )
             word_occurrence_menu( doc_word_stats[ idx ][ 0 ],
                                   doc_word_stats[ idx ][ 1 ][ "word_occ_ids"],
-                                  sentences )
+                                  subtitles )
             print_instructions()
 
         elif action.isnumeric():
@@ -340,12 +340,12 @@ def main( argv ):
     data_dir_path = 'data/'
     fname = separate_fpath( fname_srt )[ 1 ]
 
-    sentences = srt_sentences( data_dir_path + fname_srt )
+    subtitles = srt_subtitles( data_dir_path + fname_srt )
 
     # extract stats for the current doc and sort by tf-idf descendingly
     doc_word_stats = get_doc_word_stats( data_dir_path, fname )
 
-    main_menu( num_words, fname, sentences, doc_word_stats )
+    main_menu( num_words, fname, subtitles, doc_word_stats )
 
 if __name__ == "__main__":
     main( sys.argv )
