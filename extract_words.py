@@ -168,12 +168,11 @@ def word_subtitle_ids_likely_names( fpath ):
             wordpos = 0
 
             for token in doc:
-                #if token.lemma_ == "congratulation":
-                #    breakpoint()
-
+                # TODO:
                 if ( ( token.i > 0 ) and
-                     ( token.nbor( -1 ).is_sent_start or
-                       token.nbor( -1 ).is_sent_end ) ):
+                     ( token.is_sent_start or
+                       ( token.nbor( -1 ).is_punct and
+                            token.nbor( -1 ).is_sent_start ) ) ):
                     wordpos = 0
 
                 if ( token.is_punct ) or ( token is None ) or ( token.text == ' ' ) or\
@@ -270,13 +269,16 @@ def process_dir( dirpath ):
         if not fname.endswith( ".json" ):
             continue
 
+        if "_likely_names" in fname:
+            continue
+
         with open( dirpath + fname ) as json_file:
             corpus_counts[ separate_fpath( fname )[ 1 ] ] = \
                 json.load( json_file )
 
     return corpus_counts
 
-def get_doc_word_stats( data_path, file ):
+def get_doc_word_stats( data_path, file, name_filtering=False ):
     """
     given a path to a data directory and the name of a file in it, loads data about
     word occurrences in all files (or, if unavailable, computes and saves it), and
@@ -292,6 +294,20 @@ def get_doc_word_stats( data_path, file ):
 
     doc_word_stats = []
     doc = corpus_counts[ file ]
+
+    if name_filtering:
+        print( "Detecting names...", end="" )
+
+        likely_names_fname = file + "_likely_names.json"
+        if likely_names_fname in os.listdir( data_path ):
+            with open( data_path + likely_names_fname, "r" ) as json_file:
+                likely_names = json.load( json_file )
+        else:
+            _, likely_names = word_subtitle_ids_likely_names( data_path + file + ".srt" )
+            with open( data_path + likely_names_fname, "w" ) as json_file:
+                json.dump( likely_names, json_file )
+
+        print( "done!" )
 
     for word in doc:
         if word == "__total__":
@@ -312,6 +328,11 @@ def get_doc_word_stats( data_path, file ):
 
         word_stats[ 'tf-idf' ] = word_stats[ 'frequency' ] *\
             math.log( len( corpus_counts ) / word_stats[ 'word_occs_in_docs' ] )
+
+        # tank the TF-IDF score of any word that has been deemed a likely name;
+        # it is most likely irrelevant to a lanugage learner watching the movie
+        if name_filtering and ( word in likely_names ):
+            word_stats[ 'tf-idf' ] = 0
 
         # replace word count in doc with dictionary of more detailed statistics
         doc_word_stats.append(  ( word, word_stats ) )
@@ -358,7 +379,8 @@ def word_occurrence_menu( word, occ_ids, subtitles ):
         else:
             print( "Selection not understood – please try again" )
 
-def main_menu( num_words, fname, subtitles, doc_word_stats ):
+def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
+               name_filtering_enabled=False ):
     """
     Shows the top $num_words words in the file, as well as associated statistics
     and gives the user the option to print contextual example subtitles for any one
@@ -372,13 +394,16 @@ def main_menu( num_words, fname, subtitles, doc_word_stats ):
                     doc_word_stats[ i ][ 1 ][ 'count' ],
                     doc_word_stats[ i ][ 1 ][ 'word_occs_in_docs' ] ),
                 'tf-idf:', '{:.2E}'.format( doc_word_stats[ i ][ 1 ][ 'tf-idf' ] ) )
-    def print_instructions():
-        print( f"\nOptions:\n-Select a word [1-{num_words}] to see contextual"\
+    def print_instructions( name_filtering_enabled ):
+        nf_string = "enabled" if name_filtering_enabled else "disabled"
+        nf_toggle_action = "Disable" if name_filtering_enabled else "Enable"
+        print( f"\nNote: name filtering is currently {nf_string}." )
+        print( f"Options:\n-Select a word [1-{num_words}] to see contextual"\
                 " examples\n-Change number of displayed words: n\n-Display word "\
-                "list: l\n-Quit: q\n" )
+                f"list: l\n-{ nf_toggle_action } name filtering: f\n-Quit: q\n" )
 
     print_words( num_words )
-    print_instructions()
+    print_instructions( name_filtering_enabled )
 
     while True:
         action = input().strip()
@@ -388,7 +413,7 @@ def main_menu( num_words, fname, subtitles, doc_word_stats ):
             word_occurrence_menu( doc_word_stats[ idx ][ 0 ],
                                   doc_word_stats[ idx ][ 1 ][ "word_occ_ids"],
                                   subtitles )
-            print_instructions()
+            print_instructions( name_filtering_enabled )
 
         elif action.isnumeric():
             print( "Invalid number. Please try again\n" )
@@ -397,7 +422,7 @@ def main_menu( num_words, fname, subtitles, doc_word_stats ):
             num_words = num_displayed_words_menu()
 
             print_words( num_words )
-            print_instructions()
+            print_instructions( name_filtering_enabled )
 
         elif action.lower() == "l":
             print_words( num_words )
@@ -405,6 +430,15 @@ def main_menu( num_words, fname, subtitles, doc_word_stats ):
         elif action.lower() == "q":
             print( "Bye now!" )
             return
+
+        elif action.lower() == "f":
+            name_filtering_enabled = not name_filtering_enabled
+            doc_word_stats = get_doc_word_stats( data_dir_path,
+                                                 fname,
+                                                 name_filtering_enabled )
+
+            print_words( num_words )
+            print_instructions( name_filtering_enabled )
 
         else:
             print( "Selection not understood – please try again\n(type a word's "\
@@ -432,10 +466,12 @@ def main( argv ):
 
     subtitles = srt_subtitles( data_dir_path + fname_srt )
 
-    # extract stats for the current doc and sort by tf-idf descendingly
-    doc_word_stats = get_doc_word_stats( data_dir_path, fname )
+    name_filtering_enabled = False
 
-    main_menu( num_words, fname, subtitles, doc_word_stats )
+    # extract stats for the current doc and sort by tf-idf descendingly
+    doc_word_stats = get_doc_word_stats( data_dir_path, fname, name_filtering_enabled )
+
+    main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path, name_filtering_enabled )
 
 if __name__ == "__main__":
     main( sys.argv )

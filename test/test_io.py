@@ -36,7 +36,8 @@ class TestMainMenuIO( unittest.TestCase ):
     '-Display word list: l',
     '-Quit: q',
     'Bye now!'
-]
+        ]
+
         self._run_test( mock_stdout, expected_lines )
 
     @patch( "sys.stdout", new_callable=StringIO )
@@ -48,7 +49,8 @@ class TestMainMenuIO( unittest.TestCase ):
     '10. "All right, Mother, old Building and Loan pal,"',
     '20. "Well, how about the Building and Loan?"',
     '-Back: b'
-]
+        ]
+
         self._run_test( mock_stdout, expected_lines )
 
     @patch( "sys.stdout", new_callable=StringIO )
@@ -57,7 +59,7 @@ class TestMainMenuIO( unittest.TestCase ):
         expected_lines =[
     'Selection not understood – please try again',
     "(type a word's number in the list above, not the word itself)"
-]
+        ]
 
         self._run_test( mock_stdout, expected_lines )
 
@@ -68,7 +70,24 @@ class TestMainMenuIO( unittest.TestCase ):
     'New number of displayed words: ',
     'Please enter a valid number (integer >= 1)',
     '30. "wing". count in doc: 17. docs containing word: 3. tf-idf: 1.16E-03'
-]
+        ]
+
+        self._run_test( mock_stdout, expected_lines )
+
+    @patch( "sys.stdout", new_callable=StringIO )
+    @patch( "builtins.input", side_effect=[ "", "f", "q"] )
+    def test_name_filtering_integration( self, mock_input, mock_stdout ):
+        expected_lines =[
+    '1. "george". count in doc: 217. docs containing word: 4. tf-idf: 1.12E-02',
+    '10. "sam". count in doc: 25. docs containing word: 2. tf-idf: 2.28E-03',
+    '20. "zuzu". count in doc: 13. docs containing word: 1. tf-idf: 1.69E-03',
+    'Note: name filtering is currently disabled.',
+    '1. "building". count in doc: 27. docs containing word: 2. tf-idf: 2.46E-03',
+    '10. "auld". count in doc: 8. docs containing word: 1. tf-idf: 1.04E-03',
+    '20. "rent". count in doc: 6. docs containing word: 2. tf-idf: 5.46E-04',
+    'Note: name filtering is currently enabled.',
+    '-Disable name filtering: f'
+        ]
         self._run_test( mock_stdout, expected_lines )
 
 if __name__ == "__main__":
