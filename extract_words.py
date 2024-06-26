@@ -38,6 +38,12 @@ def has_alpha( string ):
             return True
     return False
 
+def is_namecase( string ):
+    """
+    returns True if first character uppercase and all others lowercase
+    """
+    return string[ 0 ].isupper() and string[ 1: ].islower()
+
 def separate_fpath( fpath ):
     """ convenience method to separate directory name, file name and extension """
 
@@ -134,6 +140,90 @@ def word_subtitle_ids( fpath ):
     word_subtitle_ids[ "__total__" ] = total_words
 
     return word_subtitle_ids
+
+def word_subtitle_ids_likely_names( fpath ):
+    """
+    TODO:
+    """
+    word_subtitle_ids = {}
+    likely_names = {}
+
+    subtitles = srt_subtitles( fpath )
+
+    total_words = 0
+
+    for sub_number, subtitle in enumerate( subtitles ):
+        if not subtitle:
+            continue
+
+        # one subtitle can have more than one dialogue line
+        # e.g.: "- Hello. Carrying any fruits or vegetables? - No."
+        for line in subtitle.split( "- "):
+            if not line:
+                continue
+
+            doc = nlp( line )
+
+            # position in doc of actual word (ignoring puncuation or other signs)
+            wordpos = 0
+
+            for token in doc:
+                #if token.lemma_ == "congratulation":
+                #    breakpoint()
+
+                if ( ( token.i > 0 ) and
+                     ( token.nbor( -1 ).is_sent_start or
+                       token.nbor( -1 ).is_sent_end ) ):
+                    wordpos = 0
+
+                if ( token.is_punct ) or ( token is None ) or ( token.text == ' ' ) or\
+                   ( token.text == "\n" ):
+                    continue
+
+                # lemmatize, filter out things like attached dashes, change to lowercase
+                lemma = re.sub( NON_ALPHABET_REGEX, "", token.lemma_.lower() )
+
+                if lemma in word_subtitle_ids:
+                    word_subtitle_ids[ lemma ].append( sub_number )
+                else:
+                     word_subtitle_ids[ lemma ] = [ sub_number ]
+
+                # if word is upper case, it is possibly a name
+                if is_namecase( token.text ):
+                    if lemma in likely_names:
+                        likely_names[ lemma ].append( wordpos )
+                    else:
+                        likely_names[ lemma ] = [ wordpos ]
+
+                wordpos += 1
+                total_words += 1
+
+	# the total number of words in the file has special key
+    word_subtitle_ids[ "__total__" ] = total_words
+
+    # if any possible name is also encountered in lowercase, it does not only appear
+    # as a proper noun in this document; mark it as a non-name
+    definitely_not_names = set()
+    for name in likely_names:
+        if len( word_subtitle_ids[ name ] ) > len( likely_names[ name ] ):
+            definitely_not_names.add( name )
+
+    for name in likely_names:
+        # if only one occurrence or if all occurrences are at the beginning of
+        # the subtitle ==> the word is not a name
+        if ( ( len( likely_names[ name ] ) < 2 ) or
+             ( not any( likely_names[ name ] )) ):
+                definitely_not_names.add( name )
+
+    # after this loop, only words that:
+    #   - were only encountered in uppercase AND
+    #   - were encountered more than once AND
+    #   - were encountered in different positions in their respecive subtitles
+    # are considered names
+    for word in definitely_not_names:
+        del likely_names[ word ]
+
+    return word_subtitle_ids, likely_names
 
 def analyze_file_subtitle_ids( fpath, cache_path="" ):
     """
