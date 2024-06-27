@@ -105,45 +105,13 @@ def srt_subtitles( fpath ):
 
     return subtitles
 
-def word_subtitle_ids( fpath ):
+def doc_word_stats( fpath ):
     """
-    takes a file path pointing to an srt file and returns a dictionary where words
-    are keys and the values are lists with the numbers of subtitles where each key
-    word was encountered
-    """
-    word_subtitle_ids = {}
-    subtitles = srt_subtitles( fpath )
-
-    total_words = 0
-
-    for i, subtitle in enumerate( subtitles ):
-        if not subtitle:
-            continue
-
-        doc = nlp( subtitle )
-
-        for token in doc:
-            if ( token.is_punct ) or ( token is None ) or ( token.text == ' ') or\
-               ( token.text == "\n" ):
-                continue
-
-            # lemmatize, filter out things like attached dashes, change to lowercase
-            lemma = re.sub( NON_ALPHABET_REGEX, "", token.lemma_.lower() )
-
-            if lemma in word_subtitle_ids:
-                word_subtitle_ids[ lemma ].append( i )
-            else:
-                 word_subtitle_ids[ lemma ] = [ i ]
-            total_words += 1
-
-    # the total number of words in the file has special key
-    word_subtitle_ids[ "__total__" ] = total_words
-
-    return word_subtitle_ids
-
-def word_subtitle_ids_likely_names( fpath ):
-    """
-    TODO:
+    Opens the subtitle file at $fpath and returns a dictionary of two dictionaries:
+        1. "wsid": for each word in the doc, a list of the ids of the subtitles
+           where it occurs.
+        2. "likely_names": a dictionary of words deemed likely names. The dictionary
+           values here are lists of ids of the word within the occurring sentence.
     """
     word_subtitle_ids = {}
     likely_names = {}
@@ -158,17 +126,19 @@ def word_subtitle_ids_likely_names( fpath ):
 
         # one subtitle can have more than one dialogue line
         # e.g.: "- Hello. Carrying any fruits or vegetables? - No."
-        for line in subtitle.split( "- "):
+        for line in subtitle.split( "- " ):
             if not line:
                 continue
 
             doc = nlp( line )
 
-            # position in doc of actual word (ignoring puncuation or other signs)
+            # position in sentence of actual word (ignoring punct or other signs)
             wordpos = 0
 
             for token in doc:
-                # TODO:
+                # it is possible for a line to contain multiple sentences; wordpos
+                # wordpos is reset then in order to help recognize words that are
+                # always capitalized, regardless of sentence position (likely names)
                 if ( ( token.i > 0 ) and
                      ( token.is_sent_start or
                        ( token.nbor( -1 ).is_punct and
@@ -222,7 +192,7 @@ def word_subtitle_ids_likely_names( fpath ):
     for word in definitely_not_names:
         del likely_names[ word ]
 
-    return word_subtitle_ids, likely_names
+    return { "wsid": word_subtitle_ids, "likely_names": likely_names }
 
 def analyze_file_subtitle_ids( fpath, cache_path="" ):
     """
@@ -234,15 +204,15 @@ def analyze_file_subtitle_ids( fpath, cache_path="" ):
 
     try:
         with open( cache_path + fname + '.json' ) as json_file:
-            counts = json.load( json_file )
+            doc_word_stats = json.load( json_file )
 
     except FileNotFoundError:
-        wsid = word_subtitle_ids( fpath )
+        doc_word_stats = doc_word_stats( fpath )
 
         # if cache path provided, store the counter dictionary
         if cache_path:
             with open( cache_path + fname + '.json' , 'w' ) as json_file:
-                json.dump( wsid, json_file )
+                json.dump( doc_word_stats, json_file )
 
 def process_dir( dirpath ):
     """
@@ -269,9 +239,6 @@ def process_dir( dirpath ):
         if not fname.endswith( ".json" ):
             continue
 
-        if "_likely_names" in fname:
-            continue
-
         with open( dirpath + fname ) as json_file:
             corpus_counts[ separate_fpath( fname )[ 1 ] ] = \
                 json.load( json_file )
@@ -293,21 +260,8 @@ def get_doc_word_stats( data_path, file, name_filtering=False ):
     corpus_counts = process_dir( data_path )
 
     doc_word_stats = []
-    doc = corpus_counts[ file ]
-
-    if name_filtering:
-        print( "Detecting names...", end="" )
-
-        likely_names_fname = file + "_likely_names.json"
-        if likely_names_fname in os.listdir( data_path ):
-            with open( data_path + likely_names_fname, "r" ) as json_file:
-                likely_names = json.load( json_file )
-        else:
-            _, likely_names = word_subtitle_ids_likely_names( data_path + file + ".srt" )
-            with open( data_path + likely_names_fname, "w" ) as json_file:
-                json.dump( likely_names, json_file )
-
-        print( "done!" )
+    doc = corpus_counts[ file ][ "wsid" ]
+    likely_names = corpus_counts[ file ][ "likely_names" ]
 
     for word in doc:
         if word == "__total__":
@@ -323,7 +277,7 @@ def get_doc_word_stats( data_path, file, name_filtering=False ):
         word_stats[ 'word_occ_ids' ] = doc[ word ]
 
         for other_doc_name, other_doc in corpus_counts.items():
-            if word in other_doc:
+            if word in other_doc[ "wsid" ]:
                 word_stats[ 'word_occs_in_docs' ] += 1
 
         word_stats[ 'tf-idf' ] = word_stats[ 'frequency' ] *\

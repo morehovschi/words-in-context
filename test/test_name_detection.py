@@ -4,7 +4,7 @@ import unittest
 import os, sys 
 sys.path.insert( 0, os.getcwd() )
 
-from extract_words import word_subtitle_ids_likely_names
+from extract_words import doc_word_stats
 
 class TestLikelyNames( unittest.TestCase ):
     def test_likely_names( self ):
@@ -43,7 +43,7 @@ class TestLikelyNames( unittest.TestCase ):
             'mrs': [ 1, 0 ]
         }
         
-        _, likely_names = word_subtitle_ids_likely_names( "data/detour-1945.srt" )
+        likely_names = doc_word_stats( "data/detour-1945.srt" )[ "likely_names" ]
 
         self.assertCountEqual( likely_names, expected_output )
 
