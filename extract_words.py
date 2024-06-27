@@ -105,7 +105,7 @@ def srt_subtitles( fpath ):
 
     return subtitles
 
-def doc_word_stats( fpath ):
+def count_words( fpath ):
     """
     Opens the subtitle file at $fpath and returns a dictionary of two dictionaries:
         1. "wsid": for each word in the doc, a list of the ids of the subtitles
@@ -204,15 +204,15 @@ def analyze_file_subtitle_ids( fpath, cache_path="" ):
 
     try:
         with open( cache_path + fname + '.json' ) as json_file:
-            doc_word_stats = json.load( json_file )
+            word_stats = json.load( json_file )
 
     except FileNotFoundError:
-        doc_word_stats = doc_word_stats( fpath )
+        word_stats = count_words( fpath )
 
         # if cache path provided, store the counter dictionary
         if cache_path:
             with open( cache_path + fname + '.json' , 'w' ) as json_file:
-                json.dump( doc_word_stats, json_file )
+                json.dump( word_stats, json_file )
 
 def process_dir( dirpath ):
     """
