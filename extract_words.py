@@ -302,7 +302,7 @@ def num_displayed_words_menu():
     range, returns it; if not, user can try again until a valid number is received
     """
     while True:
-        print( "New number of displayed words: ", end="" )
+        print( "New word window size: ", end="" )
         new_num = input()
         print()
 
@@ -340,9 +340,12 @@ def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
     and gives the user the option to print contextual example subtitles for any one
     of the displayed words.
     """
+    start_word_idx = 1
 
-    def print_words( num_words ):
-        for i in range( 1, ( min( num_words, len( doc_word_stats ) ) + 1 ) ):
+    def print_words( start_word_idx, num_words ):
+        for i in range( max( start_word_idx, 1 ),
+                        ( min( start_word_idx + num_words,
+                               len( doc_word_stats ) ) ) ):
             print( '%d. "%s". count in doc: %d. docs containing word: %d.' % (
                     i, doc_word_stats[ i ][ 0 ],
                     doc_word_stats[ i ][ 1 ][ 'count' ],
@@ -351,18 +354,26 @@ def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
     def print_instructions( name_filtering_enabled ):
         nf_string = "enabled" if name_filtering_enabled else "disabled"
         nf_toggle_action = "Disable" if name_filtering_enabled else "Enable"
-        print( f"\nNote: name filtering is currently {nf_string}." )
-        print( f"Options:\n-Select a word [1-{num_words}] to see contextual"\
-                " examples\n-Change number of displayed words: n\n-Display word "\
-                f"list: l\n-{ nf_toggle_action } name filtering: f\n-Quit: q\n" )
+        last_word_idx = min( start_word_idx + num_words - 1, len( doc_word_stats ) - 1 )
 
-    print_words( num_words )
+        print( f"\nNote: name filtering is currently {nf_string}." )
+        print( "\nOptions:\n-Select a word "\
+              f"[{ start_word_idx }-{ last_word_idx }] to see "\
+               "contextual examples\n-Change number of displayed words: w"\
+              f"\n-Display the previous { num_words } words: p\n-Display the next "\
+              f"{ num_words } words: n\n-Display current word "\
+              f"list again: l\n-{ nf_toggle_action } name filtering: f\n-Quit: q\n" )
+
+    print_words( start_word_idx, num_words )
     print_instructions( name_filtering_enabled )
 
     while True:
         action = input().strip()
 
-        if action.isnumeric() and int( action ) > 0 and int( action ) <= num_words:
+        if ( action.isnumeric() and
+             int( action ) >= start_word_idx and
+             int( action ) <= min( start_word_idx + num_words - 1,
+                                   len( doc_word_stats ) - 1 ) ):
             idx = int( action )
             word_occurrence_menu( doc_word_stats[ idx ][ 0 ],
                                   doc_word_stats[ idx ][ 1 ][ "word_occ_ids"],
@@ -372,14 +383,28 @@ def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
         elif action.isnumeric():
             print( "Invalid number. Please try again\n" )
 
-        elif action.lower() == "n":
+        elif action.lower() == "w":
             num_words = num_displayed_words_menu()
 
-            print_words( num_words )
+            print_words( start_word_idx, num_words )
+            print_instructions( name_filtering_enabled )
+
+        elif action.lower() == "n":
+            if start_word_idx < len( doc_word_stats ) - num_words:
+                start_word_idx += num_words
+
+            print_words( start_word_idx, num_words )
+            print_instructions( name_filtering_enabled )
+
+        elif action.lower() == "p":
+            if start_word_idx > 1:
+                 start_word_idx -= num_words
+
+            print_words( start_word_idx, num_words )
             print_instructions( name_filtering_enabled )
 
         elif action.lower() == "l":
-            print_words( num_words )
+            print_words( start_word_idx, num_words )
 
         elif action.lower() == "q":
             print( "Bye now!" )
@@ -391,7 +416,7 @@ def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
                                                  fname,
                                                  name_filtering_enabled )
 
-            print_words( num_words )
+            print_words( start_word_idx, num_words )
             print_instructions( name_filtering_enabled )
 
         else:
@@ -404,7 +429,7 @@ def main( argv ):
         fname_srt = 'its-a-wonderful-life-1946.srt'
     else:
         fname_srt = argv[ 1 ]
-        
+
     if len( argv ) < 3:
         num_words = 20
     else:
@@ -417,10 +442,9 @@ def main( argv ):
 
     data_dir_path = 'data/'
     fname = separate_fpath( fname_srt )[ 1 ]
+    name_filtering_enabled = False
 
     subtitles = srt_subtitles( data_dir_path + fname_srt )
-
-    name_filtering_enabled = False
 
     # extract stats for the current doc and sort by tf-idf descendingly
     doc_word_stats = get_doc_word_stats( data_dir_path, fname, name_filtering_enabled )

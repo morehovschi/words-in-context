@@ -32,8 +32,8 @@ class TestMainMenuIO( unittest.TestCase ):
     '20. "zuzu". count in doc: 13. docs containing word: 1. tf-idf: 1.69E-03',
     'Options:',
     '-Select a word [1-20] to see contextual examples',
-    '-Change number of displayed words: n',
-    '-Display word list: l',
+    '-Change number of displayed words: w',
+    '-Display current word list again: l',
     '-Quit: q',
     'Bye now!'
         ]
@@ -64,10 +64,10 @@ class TestMainMenuIO( unittest.TestCase ):
         self._run_test( mock_stdout, expected_lines )
 
     @patch( "sys.stdout", new_callable=StringIO )
-    @patch( "builtins.input", side_effect=[ "", "n", "-1", "30", "q"] )
+    @patch( "builtins.input", side_effect=[ "", "w", "-1", "30", "q"] )
     def test_change_num( self, mock_input, mock_stdout ):
         expected_lines =[
-    'New number of displayed words: ',
+    'New word window size:',
     'Please enter a valid number (integer >= 1)',
     '30. "wing". count in doc: 17. docs containing word: 3. tf-idf: 1.16E-03'
         ]
@@ -89,6 +89,30 @@ class TestMainMenuIO( unittest.TestCase ):
     '-Disable name filtering: f'
         ]
         self._run_test( mock_stdout, expected_lines )
+
+    @patch( "sys.stdout", new_callable=StringIO )
+    @patch( "builtins.input", side_effect=[ "", "w", "1200", "n", "q" ] )
+    def test_next_words( self, mock_input, mock_stdout ):
+        # sets window size to 1,200 and then hits next once, which should reach
+        # the last word in the file, at 1,601
+        expected_lines =[
+    '1601. "ahead". count in doc: 1. docs containing word: 10. tf-idf: 0.00E+00',
+        ]
+        self._run_test( mock_stdout, expected_lines )
+
+    @patch( "sys.stdout", new_callable=StringIO )
+    @patch( "builtins.input", side_effect=[ "", "n", "p", "q" ] )
+    def test_previous_words( self, mock_input, mock_stdout ):
+        main( [ "", "its-a-wonderful-life-1946.srt", "20" ] )
+        output = mock_stdout.getvalue()
+
+        first_line =\
+    '1. "george". count in doc: 217. docs containing word: 4. tf-idf: 1.12E-02'
+        
+        # testing that the line appears twice effectively tests the "previous"
+        # functionality, as the line was first printed by default, and then a
+        # second time when the user navigated from words 21-40 back to 1-20
+        self.assertEqual( output.count( first_line ), 2 )
 
 if __name__ == "__main__":
     unittest.main()
