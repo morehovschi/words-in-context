@@ -342,15 +342,19 @@ def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
     """
     start_word_idx = 1
 
-    def print_words( start_word_idx, num_words ):
-        for i in range( max( start_word_idx, 1 ),
-                        ( min( start_word_idx + num_words,
-                               len( doc_word_stats ) ) ) ):
+    def get_words_in_range( doc_word_stats, start_word_idx, num_words ):
+        return doc_word_stats[ max( start_word_idx, 1 ) :
+                               min( start_word_idx + num_words,
+                                    len( doc_word_stats ) ) ]
+
+    def print_words( word_list, start_word_idx ):
+        for i, word_stats in enumerate( word_list ):
             print( '%d. "%s". count in doc: %d. docs containing word: %d.' % (
-                    i, doc_word_stats[ i ][ 0 ],
-                    doc_word_stats[ i ][ 1 ][ 'count' ],
-                    doc_word_stats[ i ][ 1 ][ 'word_occs_in_docs' ] ),
-                'tf-idf:', '{:.2E}'.format( doc_word_stats[ i ][ 1 ][ 'tf-idf' ] ) )
+                    start_word_idx + i, word_stats[ 0 ],
+                    word_stats[ 1 ][ 'count' ],
+                    word_stats[ 1 ][ 'word_occs_in_docs' ] ),
+                'tf-idf:', '{:.2E}'.format( word_stats[ 1 ][ 'tf-idf' ] ) )
+
     def print_instructions( name_filtering_enabled ):
         nf_string = "enabled" if name_filtering_enabled else "disabled"
         nf_toggle_action = "Disable" if name_filtering_enabled else "Enable"
@@ -364,8 +368,14 @@ def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
               f"{ num_words } words: n\n-Display current word "\
               f"list again: l\n-{ nf_toggle_action } name filtering: f\n-Quit: q\n" )
 
-    print_words( start_word_idx, num_words )
-    print_instructions( name_filtering_enabled )
+    def print_words_and_instructions( word_list, start_word_idx,
+                                      name_filtering_enabled ):
+        print_words( word_list, start_word_idx )
+        print_instructions( name_filtering_enabled )
+
+    word_list = get_words_in_range( doc_word_stats, start_word_idx, num_words )
+    print_words_and_instructions( word_list, start_word_idx,
+                                  name_filtering_enabled )
 
     while True:
         action = input().strip()
@@ -381,30 +391,36 @@ def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
             print_instructions( name_filtering_enabled )
 
         elif action.isnumeric():
-            print( "Invalid number. Please try again\n" )
+            print( "Number out of range. Please try again.\n" )
 
         elif action.lower() == "w":
             num_words = num_displayed_words_menu()
 
-            print_words( start_word_idx, num_words )
-            print_instructions( name_filtering_enabled )
+            word_list = get_words_in_range( doc_word_stats, start_word_idx,
+                                            num_words )
+            print_words_and_instructions( word_list, start_word_idx,
+                                          name_filtering_enabled )
 
         elif action.lower() == "n":
             if start_word_idx < len( doc_word_stats ) - num_words:
                 start_word_idx += num_words
 
-            print_words( start_word_idx, num_words )
-            print_instructions( name_filtering_enabled )
+            word_list = get_words_in_range( doc_word_stats, start_word_idx,
+                                            num_words )
+            print_words_and_instructions( word_list, start_word_idx,
+                                          name_filtering_enabled )
 
         elif action.lower() == "p":
             if start_word_idx > 1:
                  start_word_idx -= num_words
 
-            print_words( start_word_idx, num_words )
-            print_instructions( name_filtering_enabled )
+            word_list = get_words_in_range( doc_word_stats, start_word_idx,
+                                            num_words )
+            print_words_and_instructions( word_list, start_word_idx,
+                                          name_filtering_enabled )
 
         elif action.lower() == "l":
-            print_words( start_word_idx, num_words )
+            print_words( word_list, start_word_idx )
 
         elif action.lower() == "q":
             print( "Bye now!" )
@@ -416,12 +432,28 @@ def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
                                                  fname,
                                                  name_filtering_enabled )
 
-            print_words( start_word_idx, num_words )
-            print_instructions( name_filtering_enabled )
-
+            word_list = get_words_in_range( doc_word_stats, start_word_idx,
+                                            num_words )
+            print_words_and_instructions( word_list, start_word_idx,
+                                          name_filtering_enabled )
         else:
-            print( "Selection not understood – please try again\n(type a word's "\
-                   "number in the list above, not the word itself)" )
+            # here user possibly typed the desired word from the list
+            word_idx = None
+
+            for i in range( start_word_idx, start_word_idx + num_words ):
+                if doc_word_stats[ i ][ 0 ] == action.lower():
+                    word_idx = i
+                    break
+
+            if word_idx is not None:
+                word_occurrence_menu(
+                    doc_word_stats[ word_idx ][ 0 ],
+                    doc_word_stats[ word_idx ][ 1 ][ "word_occ_ids"],
+                    subtitles )
+                print_instructions( name_filtering_enabled )
+            else:
+                print( "Selection not understood – please try again. Make sure to "\
+                       "type the\nword exactly as it appears above, or simply introduce its number." )
 
 def main( argv ):
     if len( argv ) < 2:

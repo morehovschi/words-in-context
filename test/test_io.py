@@ -54,11 +54,12 @@ class TestMainMenuIO( unittest.TestCase ):
         self._run_test( mock_stdout, expected_lines )
 
     @patch( "sys.stdout", new_callable=StringIO )
-    @patch( "builtins.input", side_effect=[ "",  "BLABLA", "q"] )
+    @patch( "builtins.input", side_effect=[ "",  "BLABLA", "21", "q"] )
     def test_bad_input( self, mock_input, mock_stdout ):
         expected_lines =[
-    'Selection not understood – please try again',
-    "(type a word's number in the list above, not the word itself)"
+    'Selection not understood – please try again. Make sure to type the',
+    'word exactly as it appears above, or simply introduce its number.',
+    'Number out of range. Please try again.'
         ]
 
         self._run_test( mock_stdout, expected_lines )
@@ -113,6 +114,16 @@ class TestMainMenuIO( unittest.TestCase ):
         # functionality, as the line was first printed by default, and then a
         # second time when the user navigated from words 21-40 back to 1-20
         self.assertEqual( output.count( first_line ), 2 )
+
+    @patch( "sys.stdout", new_callable=StringIO )
+    @patch( "builtins.input", side_effect=[ "", "f", "rent", "b", "q" ] )
+    def test_word_typing( self, mock_input, mock_stdout ):
+        # checks correct result when user types word instead of choosing by number
+        expected_lines =[
+    'Displaying occurrences of "rent":',
+    '6. "You know, they charge for meals and rent up there,"'
+        ]
+        self._run_test( mock_stdout, expected_lines )
 
 if __name__ == "__main__":
     unittest.main()
