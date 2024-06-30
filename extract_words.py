@@ -18,11 +18,12 @@ import re
 
 from progress.bar import Bar
 from joblib import Parallel, delayed
+from easynmt import EasyNMT
 
 TIMESTAMP_REGEX = "[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}"
 NON_ALPHABET_REGEX = "[^a-zA-Z']"
 
-# load English language model
+# load English language model, for lemmatization
 try:
     nlp = spacy.load( "en_core_web_sm" )
 except OSError as e:
@@ -31,6 +32,9 @@ except OSError as e:
         nlp = spacy.load( "en_core_web_sm" )
     else:
         raise e
+
+# initialize translator (used to translate to Romanian)
+translator = EasyNMT( "opus-mt" )
 
 def has_alpha( string ):
     for char in string:
@@ -320,18 +324,35 @@ def word_occurrence_menu( word, occ_ids, subtitles ):
     implemented as an additional menu/function because its functionality pertaining
     to a particular word will be expanded soon
     """
-    print( f"Displaying occurrences of \"{word}\":" )
+    print( f"\nDisplaying occurrences of \"{word}\":" )
     for i, idx in enumerate( occ_ids ):
         print( f"{ i + 1 }. \"{ subtitles[ idx ] }\"" )
-    print( "\n-Back: b" )
+    print( f"\n-Type a sentence's number [1-{len(occ_ids)}] to see its translation" )
+    print( "-Back: b" )
 
     while True:
         action = input().strip()
 
-        if action.lower() == "b":
+        if ( action.isnumeric() and
+             ( int( action ) > 0 ) and
+             ( int( action ) <= len( occ_ids ) ) ):
+            idx = int( action )
+
+            print( f"Selected sentence:\n \"{ subtitles[ occ_ids[ idx - 1 ] ] }\"" )
+            print( "\nTranslating...", end="", flush=True )
+
+            translated = translator.translate( subtitles[ occ_ids[ idx - 1 ] ],
+                                               target_lang="ro" )
+
+            print( "done!\n" )
+            print( translated )
+
+        elif action.isnumeric():
+            print( "Number out of range – please try again" )
+        elif action.lower() == "b":
             return
         else:
-            print( "Selection not understood – please try again" )
+            print( "Selection not understood – please try again." )
 
 def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
                name_filtering_enabled=False ):

@@ -125,5 +125,19 @@ class TestMainMenuIO( unittest.TestCase ):
         ]
         self._run_test( mock_stdout, expected_lines )
 
+    @patch( "sys.stdout", new_callable=StringIO )
+    @patch( "builtins.input", side_effect=[ "", "f", "rent", "5", "b",
+                                            "n", "n", "button", "1", "b", "q" ] )
+    def test_translation( self, mock_input, mock_stdout ):
+        expected_lines =[
+    'Selected sentence:',
+    ' "90% owned by suckers who used to pay rent to you."',
+    'Translating...done!',
+    '90% deţinut de fraieri care obişnuiau să-ţi plătească chirie.',
+    ' "And did you know that button behind you causes this floor to open up?"',
+    'Şi ştiai că acel buton din spatele tău face ca acest etaj să se deschidă?'
+        ]
+        self._run_test( mock_stdout, expected_lines )
+
 if __name__ == "__main__":
     unittest.main()
