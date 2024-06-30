@@ -323,6 +323,10 @@ def word_occurrence_menu( word, occ_ids, subtitles ):
 
     implemented as an additional menu/function because its functionality pertaining
     to a particular word will be expanded soon
+
+    returns bool:
+        - False for staying in the main menu
+        - True for quitting the whole program
     """
     print( f"\nDisplaying occurrences of \"{word}\":" )
     for i, idx in enumerate( occ_ids ):
@@ -350,7 +354,9 @@ def word_occurrence_menu( word, occ_ids, subtitles ):
         elif action.isnumeric():
             print( "Number out of range – please try again" )
         elif action.lower() == "b":
-            return
+            return False
+        elif action.lower() == "q":
+            return True
         else:
             print( "Selection not understood – please try again." )
 
@@ -406,9 +412,14 @@ def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
              int( action ) <= min( start_word_idx + num_words - 1,
                                    len( doc_word_stats ) - 1 ) ):
             idx = int( action )
-            word_occurrence_menu( doc_word_stats[ idx ][ 0 ],
-                                  doc_word_stats[ idx ][ 1 ][ "word_occ_ids"],
-                                  subtitles )
+            quit_program =\
+                word_occurrence_menu( doc_word_stats[ idx ][ 0 ],
+                                      doc_word_stats[ idx ][ 1 ][ "word_occ_ids"],
+                                      subtitles )
+            if quit_program:
+                print( "Bye now!")
+                return
+
             print_instructions( name_filtering_enabled )
 
         elif action.isnumeric():
@@ -467,10 +478,15 @@ def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
                     break
 
             if word_idx is not None:
-                word_occurrence_menu(
+                quit_program = word_occurrence_menu(
                     doc_word_stats[ word_idx ][ 0 ],
                     doc_word_stats[ word_idx ][ 1 ][ "word_occ_ids"],
                     subtitles )
+
+                if quit_program:
+                    print( "Bye now!" )
+                    return
+
                 print_instructions( name_filtering_enabled )
             else:
                 print( "Selection not understood – please try again. Make sure to "\

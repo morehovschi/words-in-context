@@ -41,7 +41,7 @@ class TestMainMenuIO( unittest.TestCase ):
         self._run_test( mock_stdout, expected_lines )
 
     @patch( "sys.stdout", new_callable=StringIO )
-    @patch( "builtins.input", side_effect=[ "", "f", "15", "b", "q"] )
+    @patch( "builtins.input", side_effect=[ "", "f", "15", "q"] )
     def test_good_input( self, mock_input, mock_stdout ):
         expected_lines =[
     'Displaying occurrences of "loan":',
@@ -116,7 +116,7 @@ class TestMainMenuIO( unittest.TestCase ):
         self.assertEqual( output.count( first_line ), 2 )
 
     @patch( "sys.stdout", new_callable=StringIO )
-    @patch( "builtins.input", side_effect=[ "", "rent", "b", "q" ] )
+    @patch( "builtins.input", side_effect=[ "", "rent", "q" ] )
     def test_word_typing( self, mock_input, mock_stdout ):
         # checks correct result when user types word instead of choosing by number
         expected_lines =[
@@ -127,7 +127,7 @@ class TestMainMenuIO( unittest.TestCase ):
 
     @patch( "sys.stdout", new_callable=StringIO )
     @patch( "builtins.input", side_effect=[ "", "rent", "5", "b",
-                                            "n", "n", "button", "1", "b", "q" ] )
+                                            "n", "n", "button", "1", "q" ] )
     def test_translation( self, mock_input, mock_stdout ):
         expected_lines =[
     'Selected sentence:',
