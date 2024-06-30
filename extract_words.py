@@ -495,7 +495,7 @@ def main( argv ):
 
     data_dir_path = 'data/'
     fname = separate_fpath( fname_srt )[ 1 ]
-    name_filtering_enabled = False
+    name_filtering_enabled = True
 
     subtitles = srt_subtitles( data_dir_path + fname_srt )
 

@@ -24,7 +24,7 @@ class TestMainMenuIO( unittest.TestCase ):
             self.assertIn( line, output )
 
     @patch( "sys.stdout", new_callable=StringIO )
-    @patch( "builtins.input", side_effect=[ "", "q" ] )
+    @patch( "builtins.input", side_effect=[ "", "f", "q" ] )
     def test_quit( self, mock_input, mock_stdout ):
         expected_lines =[
     '1. "george". count in doc: 217. docs containing word: 4. tf-idf: 1.12E-02',
@@ -41,7 +41,7 @@ class TestMainMenuIO( unittest.TestCase ):
         self._run_test( mock_stdout, expected_lines )
 
     @patch( "sys.stdout", new_callable=StringIO )
-    @patch( "builtins.input", side_effect=[ "", "15", "b", "q"] )
+    @patch( "builtins.input", side_effect=[ "", "f", "15", "b", "q"] )
     def test_good_input( self, mock_input, mock_stdout ):
         expected_lines =[
     'Displaying occurrences of "loan":',
@@ -54,7 +54,7 @@ class TestMainMenuIO( unittest.TestCase ):
         self._run_test( mock_stdout, expected_lines )
 
     @patch( "sys.stdout", new_callable=StringIO )
-    @patch( "builtins.input", side_effect=[ "",  "BLABLA", "21", "q"] )
+    @patch( "builtins.input", side_effect=[ "", "BLABLA", "21", "q"] )
     def test_bad_input( self, mock_input, mock_stdout ):
         expected_lines =[
     'Selection not understood – please try again. Make sure to type the',
@@ -65,7 +65,7 @@ class TestMainMenuIO( unittest.TestCase ):
         self._run_test( mock_stdout, expected_lines )
 
     @patch( "sys.stdout", new_callable=StringIO )
-    @patch( "builtins.input", side_effect=[ "", "w", "-1", "30", "q"] )
+    @patch( "builtins.input", side_effect=[ "", "f", "w", "-1", "30", "q"] )
     def test_change_num( self, mock_input, mock_stdout ):
         expected_lines =[
     'New word window size:',
@@ -92,7 +92,7 @@ class TestMainMenuIO( unittest.TestCase ):
         self._run_test( mock_stdout, expected_lines )
 
     @patch( "sys.stdout", new_callable=StringIO )
-    @patch( "builtins.input", side_effect=[ "", "w", "1200", "n", "q" ] )
+    @patch( "builtins.input", side_effect=[ "", "f", "w", "1200", "n", "q" ] )
     def test_next_words( self, mock_input, mock_stdout ):
         # sets window size to 1,200 and then hits next once, which should reach
         # the last word in the file, at 1,601
@@ -102,7 +102,7 @@ class TestMainMenuIO( unittest.TestCase ):
         self._run_test( mock_stdout, expected_lines )
 
     @patch( "sys.stdout", new_callable=StringIO )
-    @patch( "builtins.input", side_effect=[ "", "n", "p", "q" ] )
+    @patch( "builtins.input", side_effect=[ "", "f", "n", "p", "q" ] )
     def test_previous_words( self, mock_input, mock_stdout ):
         main( [ "", "its-a-wonderful-life-1946.srt", "20" ] )
         output = mock_stdout.getvalue()
@@ -116,7 +116,7 @@ class TestMainMenuIO( unittest.TestCase ):
         self.assertEqual( output.count( first_line ), 2 )
 
     @patch( "sys.stdout", new_callable=StringIO )
-    @patch( "builtins.input", side_effect=[ "", "f", "rent", "b", "q" ] )
+    @patch( "builtins.input", side_effect=[ "", "rent", "b", "q" ] )
     def test_word_typing( self, mock_input, mock_stdout ):
         # checks correct result when user types word instead of choosing by number
         expected_lines =[
@@ -126,7 +126,7 @@ class TestMainMenuIO( unittest.TestCase ):
         self._run_test( mock_stdout, expected_lines )
 
     @patch( "sys.stdout", new_callable=StringIO )
-    @patch( "builtins.input", side_effect=[ "", "f", "rent", "5", "b",
+    @patch( "builtins.input", side_effect=[ "", "rent", "5", "b",
                                             "n", "n", "button", "1", "b", "q" ] )
     def test_translation( self, mock_input, mock_stdout ):
         expected_lines =[
