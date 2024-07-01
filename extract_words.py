@@ -23,15 +23,10 @@ from easynmt import EasyNMT
 TIMESTAMP_REGEX = "[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}"
 NON_ALPHABET_REGEX = "[^a-zA-Z']"
 
-# load English language model, for lemmatization
-try:
-    nlp = spacy.load( "en_core_web_sm" )
-except OSError as e:
-    if "Can't find model" in str( e ):
-        spacy.cli.download( "en_core_web_sm" )
-        nlp = spacy.load( "en_core_web_sm" )
-    else:
-        raise e
+# check that English language model available, and download if necessary
+# (used for lemmatization)
+if "en_core_web_sm" not in spacy.cli.info()[ "pipelines" ]:
+    spacy.cli.download( "en_core_web_sm" )
 
 # initialize translator (used to translate to Romanian)
 translator = EasyNMT( "opus-mt" )
@@ -117,6 +112,13 @@ def count_words( fpath ):
         2. "likely_names": a dictionary of words deemed likely names. The dictionary
            values here are lists of ids of the word within the occurring sentence.
     """
+
+    # load English language model, for lemmatization;
+    #
+    # this function is called in parallel, so each of its instances needs to load
+    # a separate instance of the spacy model, to avoid shared memory issues
+    nlp = spacy.load( "en_core_web_sm" )
+
     word_subtitle_ids = {}
     likely_names = {}
 
@@ -231,7 +233,7 @@ def process_dir( dirpath ):
     for fname in os.listdir( dirpath ):
         if fname.endswith( '.srt' ):
             analyzables.append( fname )
-    Parallel( n_jobs=1 )( delayed( analyze_file_subtitle_ids )( dirpath + fname , 'data/' )
+    Parallel( n_jobs=-1 )( delayed( analyze_file_subtitle_ids )( dirpath + fname , 'data/' )
                         for fname in Bar( 'Counting words in files' ).iter( analyzables ) )
     print( 'elapsed:', time.time() - time0, "\n" )
 
