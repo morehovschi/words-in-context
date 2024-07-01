@@ -6,7 +6,6 @@ lines are present (based on data file "its-a-wonderful-life-1946.srt").
 import unittest
 from unittest.mock import patch
 from io import StringIO
-import sys
 
 # sys path manipulation necessary for importing function defined in parent dir
 import os, sys 
