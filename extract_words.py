@@ -328,11 +328,20 @@ def word_occurrence_menu( word, occ_ids, subtitles ):
         - False for staying in the main menu
         - True for quitting the whole program
     """
-    print( f"\nDisplaying occurrences of \"{word}\":" )
-    for i, idx in enumerate( occ_ids ):
-        print( f"{ i + 1 }. \"{ subtitles[ idx ] }\"" )
-    print( f"\n-Type a sentence's number [1-{len(occ_ids)}] to see its translation" )
-    print( "-Back: b" )
+    def print_examples():
+        print( f"\nDisplaying occurrences of \"{word}\":" )
+        for i, idx in enumerate( occ_ids ):
+            print( f"{ i + 1 }. \"{ subtitles[ idx ] }\"" )
+
+    def print_instructions():
+        print( "\nOptions:" )
+        print( f"-Type a sentence's number [1-{len(occ_ids)}] to see its translation" )
+        print( "-Display all examples again: l" )
+        print( "-Back: b" )
+        print( "-Quit: q\n" )
+
+    print_examples()
+    print_instructions()
 
     while True:
         action = input().strip()
@@ -350,9 +359,13 @@ def word_occurrence_menu( word, occ_ids, subtitles ):
 
             print( "done!\n" )
             print( translated )
+            print_instructions()
 
         elif action.isnumeric():
             print( "Number out of range – please try again" )
+        elif action.lower() == "l":
+            print_examples()
+            print_instructions()
         elif action.lower() == "b":
             return False
         elif action.lower() == "q":

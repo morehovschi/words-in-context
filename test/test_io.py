@@ -139,5 +139,23 @@ class TestMainMenuIO( unittest.TestCase ):
         ]
         self._run_test( mock_stdout, expected_lines )
 
+    @patch( "sys.stdout", new_callable=StringIO )
+    @patch( "builtins.input", side_effect=[ "", "rent", "l", "q" ] )
+    def test_display_examples( self, mock_input, mock_stdout ):
+        main( [ "", "its-a-wonderful-life-1946.srt", "20" ] )
+        output = mock_stdout.getvalue()
+
+        instruction_line =\
+    '-Display all examples again: l'
+
+        example_line =\
+    '6. "You know, they charge for meals and rent up there,"'
+
+        self.assertIn( example_line, output )
+
+        # testing that the line appears twice checks that the line was displayed
+        # once by default, and then a second time after the user typed "l"
+        self.assertEqual( output.count( example_line ), 2 )
+
 if __name__ == "__main__":
     unittest.main()
