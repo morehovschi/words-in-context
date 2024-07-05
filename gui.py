@@ -1,4 +1,5 @@
 import sys
+from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
@@ -10,6 +11,23 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QTextOption
 from extract_words import srt_subtitles, get_doc_word_stats
+from easynmt import EasyNMT
+
+# initialize translator (for translating to Romanian)
+translator = EasyNMT( "opus-mt" )
+
+class TranslationThread( QThread ):
+    translation_done = pyqtSignal( str )
+
+    def __init__( self, text_to_translate ):
+        super().__init__()
+        self.text_to_translate = text_to_translate
+
+    def run(self):
+        # Simulate a long translation process
+        translated_text = translator.translate( self.text_to_translate,
+                                                target_lang="ro" )
+        self.translation_done.emit( translated_text )
 
 class MainWindow( QWidget ):
     def __init__( self ):
@@ -46,6 +64,7 @@ class MainWindow( QWidget ):
         # connect signals and slots
         self.left_section.itemSelectionChanged.connect( self.updateExamples )
         self.middle_section.itemSelectionChanged.connect( self.displayExample )
+        self.translate_button.clicked.connect( self.translateExample )
 
         self.doc_word_stats = None
         self.srt_subtitles = None
@@ -71,7 +90,7 @@ class MainWindow( QWidget ):
         """
 
         data_path = "data/"
-        file = "its-a-wonderful-life-1946"
+        file = "a-bucket-of-blood-1959"
         name_filtering = True
 
         self.srt_subtitles = srt_subtitles( data_path + file + ".srt" )
@@ -140,6 +159,47 @@ class MainWindow( QWidget ):
         front_text = selected_word + "\n\n" + selected_example
         self.front_text_edit.setPlainText( front_text )
 
+        # clear previous translations when displaying a new example
+        self.back_text_edit.clear()
+
+    def translateExample( self ):
+        """
+        initializes a translation thread with the word and example to translate
+        when the user clicks "Translate"
+
+        also changes the text on the button to "Translating..." until translation
+        is doe
+        """
+        self.translate_button.setText( "Translating..." )
+        self.translate_button.setEnabled( False )
+
+        selected_word, selected_example = self.get_current_word_and_example()
+        self.translation_thread = TranslationThread( selected_word + "\n\n" +
+                                                     selected_example )
+
+        self.translation_thread.translation_done.connect( self.onTranslationDone )
+        self.translation_thread.start()
+
+    def onTranslationDone( self, translated_text ):
+        """
+        gets called whenever the translation thread has finished its job
+
+        updates the translation text box
+        """
+
+        # sometimes the translater capitalizes the translated word for no reason;
+        # below is a dirty hack around that
+        translated_word, translated_example = translated_text.split( "\n\n" )
+        translated_word = translated_word.lower()
+
+        # hack around an issue where spaces near periods and commas are too small
+        translated_example =\
+            translated_example.replace( ".", ". " ).replace( ",", ", " ).strip()
+
+        self.back_text_edit.setText( translated_word + "\n\n" + translated_example )
+
+        self.translate_button.setText( "Translate" )
+        self.translate_button.setEnabled( True )
 
 if __name__ == "__main__":
     app = QApplication( sys.argv )
