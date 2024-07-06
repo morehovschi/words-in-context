@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QPushButton
 )
 from PyQt5.QtGui import QTextOption, QFont
-from extract_words import srt_subtitles, get_doc_word_stats
+from extract_words import srt_subtitles, get_doc_word_stats, separate_fpath
 from easynmt import EasyNMT
 
 # initialize translator (for translating to Romanian)
@@ -30,8 +30,9 @@ class TranslationThread( QThread ):
         self.translation_done.emit( translated_text )
 
 class MainWindow( QWidget ):
-    def __init__( self ):
+    def __init__( self, sub_fpath ):
         super().__init__()
+        self.sub_fpath = sub_fpath
         self.initUI()
 
     def initUI( self ):
@@ -89,11 +90,10 @@ class MainWindow( QWidget ):
         load time
         """
 
-        data_path = "data/"
-        file = "a-bucket-of-blood-1959"
         name_filtering = True
 
-        self.srt_subtitles = srt_subtitles( data_path + file + ".srt" )
+        self.srt_subtitles = srt_subtitles( self.sub_fpath )
+        data_path, file, _ = separate_fpath( self.sub_fpath )
         self.doc_word_stats = get_doc_word_stats( data_path, file, name_filtering )
 
         self.top_words = []
@@ -235,6 +235,12 @@ class MainWindow( QWidget ):
 
 if __name__ == "__main__":
     app = QApplication( sys.argv )
-    mainWindow = MainWindow()
+
+    if len( sys.argv ) > 1:
+        sub_fpath = sys.argv[ 1 ]
+    else:
+        sub_fpath = "data/its-a-wonderful-life-1946.srt"
+
+    mainWindow = MainWindow( sub_fpath=sub_fpath )
     mainWindow.show()
     sys.exit( app.exec_() )
