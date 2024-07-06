@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QPushButton
 )
-from PyQt5.QtGui import QTextOption
+from PyQt5.QtGui import QTextOption, QFont
 from extract_words import srt_subtitles, get_doc_word_stats
 from easynmt import EasyNMT
 
@@ -200,6 +200,38 @@ class MainWindow( QWidget ):
 
         self.translate_button.setText( "Translate" )
         self.translate_button.setEnabled( True )
+
+    def keyPressEvent(self, event):
+        """
+        override parent class's method that is called when user presses keys
+
+        currently only reacts to Cmd + B / Ctrl + B when user selects a piece of
+        text to be made bold
+        """
+        if ( ( event.modifiers() == Qt.ControlModifier or
+               event.modifiers() == Qt.MetaModifier) and
+             event.key() == Qt.Key_B ):
+            self.toggleBold()
+
+    def toggleBold( self ):
+        """
+        makes selected text bold
+        """
+
+        editor = self.focusWidget()  # Get the currently focused widget
+
+        if isinstance( editor, QTextEdit ):
+            cursor = editor.textCursor()
+
+            if cursor.hasSelection():
+                char_format = cursor.charFormat()
+
+                if char_format.fontWeight() == QFont.Bold:
+                    char_format.setFontWeight( QFont.Normal )
+                else:
+                    char_format.setFontWeight( QFont.Bold )
+
+                cursor.mergeCharFormat( char_format )
 
 if __name__ == "__main__":
     app = QApplication( sys.argv )
