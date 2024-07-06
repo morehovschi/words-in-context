@@ -26,6 +26,7 @@ class TranslationThread( QThread ):
     def run(self):
         # Simulate a long translation process
         translated_text = translator.translate( self.text_to_translate,
+                                                source_lang="en",
                                                 target_lang="ro" )
         self.translation_done.emit( translated_text )
 
