@@ -33,6 +33,8 @@ class TranslationThread( QThread ):
         self.translation_done.emit( translated_text )
 
 class MainWindow( QWidget ):
+    translation_complete = pyqtSignal()
+
     def __init__( self, sub_fpath ):
         super().__init__()
         self.sub_fpath = sub_fpath
@@ -194,6 +196,9 @@ class MainWindow( QWidget ):
 
         self.translate_button.setText( "Translate" )
         self.translate_button.setEnabled( True )
+
+        # this signal is used by tests
+        self.translation_complete.emit()
 
     def keyPressEvent(self, event):
         """
