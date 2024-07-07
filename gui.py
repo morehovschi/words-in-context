@@ -119,12 +119,7 @@ class MainWindow( QWidget ):
 
         examples = []
         for i, occ_idx in enumerate( occ_ids ):
-            example = self.srt_subtitles[ occ_idx ]
-            # workaround for a sentence display issue where the spaces around
-            # periods and commas are too small
-            example = example.replace( ".", ". " ).replace( ",",", " )
-            example += "\n"
-
+            example = self.srt_subtitles[ occ_idx ] + "\n"
             examples.append( f"{ i+1 }.  " + example )
 
         self.middle_section.clear()
@@ -194,10 +189,6 @@ class MainWindow( QWidget ):
         # below is a dirty hack around that
         translated_word, translated_example = translated_text.split( "\n\n" )
         translated_word = translated_word.lower()
-
-        # hack around an issue where spaces near periods and commas are too small
-        translated_example =\
-            translated_example.replace( ".", ". " ).replace( ",", ", " ).strip()
 
         self.back_text_edit.setText( translated_word + "\n\n" + translated_example )
 
