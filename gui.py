@@ -7,7 +7,9 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QListWidget,
     QTextEdit,
-    QPushButton
+    QPushButton,
+    QFileDialog,
+    QMessageBox
 )
 from PyQt5.QtGui import QTextOption, QFont
 from extract_words import srt_subtitles, get_doc_word_stats, separate_fpath
@@ -234,13 +236,31 @@ class MainWindow( QWidget ):
 
                 cursor.mergeCharFormat( char_format )
 
+def select_subtitle_file():
+    """
+    shows user a dialog box prompting for file selection
+    """
+
+    options = QFileDialog.Options()
+    options |= QFileDialog.ReadOnly
+    file_dialog = QFileDialog()
+    file_dialog.setOptions( options )
+    file_dialog.setWindowTitle( "Select Subtitle File" )
+    file_dialog.setDirectory( "data/" )  # Default directory to open
+    file_dialog.setNameFilter( "Subtitle Files (*.srt)" )
+
+    if file_dialog.exec_() == QFileDialog.Accepted:
+        return file_dialog.selectedFiles()[0]
+    return None
+
 if __name__ == "__main__":
     app = QApplication( sys.argv )
 
-    if len( sys.argv ) > 1:
-        sub_fpath = sys.argv[ 1 ]
-    else:
-        sub_fpath = "data/its-a-wonderful-life-1946.srt"
+    sub_fpath = select_subtitle_file()
+    if not sub_fpath:
+        QMessageBox.warning( None, "No File Selected",
+                             "No subtitle file selected. Exiting." )
+        sys.exit()
 
     mainWindow = MainWindow( sub_fpath=sub_fpath )
     mainWindow.show()
