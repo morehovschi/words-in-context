@@ -1,5 +1,6 @@
+import os
 import sys
-from PyQt5.QtCore import QThread, pyqtSignal, Qt
+from PyQt5.QtCore import QThread, pyqtSignal, Qt, QUrl
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
@@ -12,21 +13,41 @@ from PyQt5.QtWidgets import (
     QMessageBox
 )
 from PyQt5.QtGui import QTextOption, QFont
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from extract_words import srt_subtitles, get_doc_word_stats, separate_fpath
 from googletrans import Translator
+from gtts import gTTS
 
 # initialize translator (for translating to Romanian)
 translator = Translator()
 
+class AudioThread( QThread ):
+    """
+    TODO:
+    """
+    audio_done = pyqtSignal()
+
+    def __init__( self, source_text, audio_filename ):
+        super().__init__()
+        self.source_text = source_text
+        self.audio_filename = audio_filename
+
+    def run( self ):
+        audio = gTTS( text=self.source_text, lang="en", slow=False )
+        audio.save( self.audio_filename )
+        self.audio_done.emit()
+
 class TranslationThread( QThread ):
+    """
+    thread that executes translation when "Translate" is clicked
+    """
     translation_done = pyqtSignal( str )
 
     def __init__( self, text_to_translate ):
         super().__init__()
         self.text_to_translate = text_to_translate
 
-    def run(self):
-        # Simulate a long translation process
+    def run( self ):
         translated_text = translator.translate( self.text_to_translate,
                                                 src="en",
                                                 dest="ro" ).text
@@ -53,12 +74,14 @@ class MainWindow( QWidget ):
         # right section layout
         right_layout = QVBoxLayout()
         self.front_text_edit = QTextEdit()
+        self.listen_button = QPushButton( "Listen" )
         self.translate_button = QPushButton( "Translate" )
         self.back_text_edit = QTextEdit()
         self.right_section = QTextEdit()
 
         # set up right layout
         right_layout.addWidget( self.front_text_edit )
+        right_layout.addWidget( self.listen_button )
         right_layout.addWidget( self.translate_button )
         right_layout.addWidget( self.back_text_edit )
 
@@ -70,11 +93,14 @@ class MainWindow( QWidget ):
         # connect signals and slots
         self.left_section.itemSelectionChanged.connect( self.updateExamples )
         self.middle_section.itemSelectionChanged.connect( self.displayExample )
+        self.listen_button.clicked.connect( self.listenToExample )
         self.translate_button.clicked.connect( self.translateExample )
 
         self.doc_word_stats = None
         self.srt_subtitles = None
         self.top_words = None
+
+        self.media_player = QMediaPlayer()
 
         # extract the top words in the analyzed file
         self.loadTopWords()
@@ -198,7 +224,35 @@ class MainWindow( QWidget ):
         self.translate_button.setEnabled( True )
 
         # this signal is used by tests
-        self.translation_complete.emit()
+        self.translation_complete.emit( self.front_text_edit)
+
+    def listenToExample( self ):
+        """
+        TODO:
+        """
+        self.listen_button.setText( "Creating audio..." )
+        self.listen_button.setEnabled( False )
+
+        selected_word, selected_example = self.get_current_word_and_example()
+        self.audio_thread = AudioThread( selected_word + ". " + selected_example,
+                                         "tmp-audio.mp3" )
+        self.audio_thread.audio_done.connect( self.onAudioReady )
+        self.audio_thread.start()
+
+    def onAudioReady( self ):
+        """
+        TODO:
+        """
+        self.media_player.setMedia( QMediaContent(
+            QUrl.fromLocalFile( os.getcwd() + "/" + "tmp-audio.mp3" ) ) )
+
+        self.media_player.setVolume( 50 )
+        self.media_player.play()
+
+        self.listen_button.setText( "Listen" )
+        self.listen_button.setEnabled( True )
+
+        os.unlink( os.getcwd() + "/" + "tmp-audio.mp3" )
 
     def keyPressEvent(self, event):
         """
