@@ -18,7 +18,7 @@ import re
 
 from progress.bar import Bar
 from joblib import Parallel, delayed
-from easynmt import EasyNMT
+from googletrans import Translator
 
 TIMESTAMP_REGEX = "[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}"
 NON_ALPHABET_REGEX = "[^a-zA-Z']"
@@ -28,8 +28,8 @@ NON_ALPHABET_REGEX = "[^a-zA-Z']"
 if "en_core_web_sm" not in spacy.cli.info()[ "pipelines" ]:
     spacy.cli.download( "en_core_web_sm" )
 
-# initialize translator (used to translate to Romanian)
-translator = EasyNMT( "opus-mt" )
+# initialize translator (for translating into Romanian)
+translator = Translator()
 
 def has_alpha( string ):
     for char in string:
@@ -357,7 +357,7 @@ def word_occurrence_menu( word, occ_ids, subtitles ):
             print( "\nTranslating...", end="", flush=True )
 
             translated = translator.translate( subtitles[ occ_ids[ idx - 1 ] ],
-                                               target_lang="ro" )
+                                               src="en", dest="ro" ).text
 
             print( "done!\n" )
             print( translated )

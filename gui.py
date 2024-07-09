@@ -13,10 +13,10 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QTextOption, QFont
 from extract_words import srt_subtitles, get_doc_word_stats, separate_fpath
-from easynmt import EasyNMT
+from googletrans import Translator
 
 # initialize translator (for translating to Romanian)
-translator = EasyNMT( "opus-mt" )
+translator = Translator()
 
 class TranslationThread( QThread ):
     translation_done = pyqtSignal( str )
@@ -28,8 +28,8 @@ class TranslationThread( QThread ):
     def run(self):
         # Simulate a long translation process
         translated_text = translator.translate( self.text_to_translate,
-                                                source_lang="en",
-                                                target_lang="ro" )
+                                                src="en",
+                                                dest="ro" ).text
         self.translation_done.emit( translated_text )
 
 class MainWindow( QWidget ):

@@ -61,8 +61,8 @@ class TestMainWindow( unittest.TestCase ):
 
         expected_front_text = "scar\n\nI also pointed out that the real Haskell"\
                               " had a scar on his forearm."
-        expected_back_text = "cicatrice\n\nDe asemenea, am subliniat că "\
-                             "adevăratul Haskell avea o cicatrice pe antebraţ."
+        expected_back_text = "cicatrice\n\nAm mai subliniat că adevăratul "\
+                             "Haskell avea o cicatrice pe antebraț."\
 
         self.assertEqual( self.main_window.front_text_edit.toPlainText(), expected_front_text )
         self.assertEqual( self.main_window.back_text_edit.toPlainText(), expected_back_text )
