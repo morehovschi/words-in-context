@@ -224,7 +224,7 @@ class MainWindow( QWidget ):
         self.translate_button.setEnabled( True )
 
         # this signal is used by tests
-        self.translation_complete.emit( self.front_text_edit)
+        self.translation_complete.emit()
 
     def listenToExample( self ):
         """
