@@ -33,6 +33,10 @@ class AudioThread( QThread ):
         self.audio_filename = audio_filename
 
     def run( self ):
+        # clean up any previously created temporary audio
+        if os.path.isfile( self.audio_filename ):
+            os.unlink( self.audio_filename )
+
         audio = gTTS( text=self.source_text, lang="en", slow=False )
         audio.save( self.audio_filename )
         self.audio_done.emit()
@@ -243,16 +247,24 @@ class MainWindow( QWidget ):
         """
         TODO:
         """
+        # clear any audio files that the QMediaPlayer may have cached
+        # (necessary on Windows)
+        self.media_player.stop()
+        self.media_player.setMedia( QMediaContent() )
+
+        tmp_audio_path = "tmp-audio.mp3"
+        if "nt" not in os.name:
+            # prepend to the path if not on Windows
+            tmp_audio_path = os.getcwd() + "/" + tmp_audio_path
+
         self.media_player.setMedia( QMediaContent(
-            QUrl.fromLocalFile( os.getcwd() + "/" + "tmp-audio.mp3" ) ) )
+            QUrl.fromLocalFile( tmp_audio_path ) ) )
 
         self.media_player.setVolume( 50 )
         self.media_player.play()
 
         self.listen_button.setText( "Listen" )
         self.listen_button.setEnabled( True )
-
-        os.unlink( os.getcwd() + "/" + "tmp-audio.mp3" )
 
     def keyPressEvent(self, event):
         """
@@ -286,6 +298,11 @@ class MainWindow( QWidget ):
 
                 cursor.mergeCharFormat( char_format )
 
+    @staticmethod
+    def clean_up_temp_audio():
+        if os.path.isfile( "tmp-audio.mp3" ):
+            os.unlink( "tmp-audio.mp3" )
+
 def select_subtitle_file():
     """
     shows user a dialog box prompting for file selection
@@ -313,5 +330,6 @@ if __name__ == "__main__":
         sys.exit()
 
     mainWindow = MainWindow( sub_fpath=sub_fpath )
+    app.aboutToQuit.connect( MainWindow.clean_up_temp_audio )
     mainWindow.show()
     sys.exit( app.exec_() )

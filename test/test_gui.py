@@ -25,6 +25,9 @@ class TestMainWindow( unittest.TestCase ):
     def tearDown( self ):
         self.main_window.close()
 
+        # verify that temporary audio file has been cleaned up
+        self.assertFalse( os.path.isfile( "tmp-audio.mp3" ) )
+
     def test_interactions( self ):
         """
         simulate the user clicking a top word in the left section, and then an
