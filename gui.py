@@ -75,18 +75,21 @@ class MainWindow( QWidget ):
         self.middle_section = QListWidget()
         self.middle_section.setWordWrap( QTextOption.WordWrap )
 
+        # layout for the two buttons in the right section
+        button_layout = QHBoxLayout()
+        self.listen_button = QPushButton( "Listen" )
+        self.translate_button = QPushButton( "Translate" )
+        button_layout.addWidget( self.listen_button )
+        button_layout.addWidget( self.translate_button )
+
         # right section layout
         right_layout = QVBoxLayout()
         self.front_text_edit = QTextEdit()
-        self.listen_button = QPushButton( "Listen" )
-        self.translate_button = QPushButton( "Translate" )
         self.back_text_edit = QTextEdit()
-        self.right_section = QTextEdit()
 
         # set up right layout
         right_layout.addWidget( self.front_text_edit )
-        right_layout.addWidget( self.listen_button )
-        right_layout.addWidget( self.translate_button )
+        right_layout.addLayout( button_layout )
         right_layout.addWidget( self.back_text_edit )
 
         # set up top level layout
