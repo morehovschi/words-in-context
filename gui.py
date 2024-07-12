@@ -192,24 +192,24 @@ class MainWindow( QWidget ):
         layout.addLayout( right_layout )
 
         # connect signals and slots
-        self.left_section.itemSelectionChanged.connect( self.updateExamples )
-        self.middle_section.itemSelectionChanged.connect( self.displayExample )
-        self.listen_button.clicked.connect( self.listenToExample )
-        self.translate_button.clicked.connect( self.translateExample )
+        self.left_section.itemSelectionChanged.connect( self.update_examples )
+        self.middle_section.itemSelectionChanged.connect( self.display_example )
+        self.listen_button.clicked.connect( self.listen_to_example )
+        self.translate_button.clicked.connect( self.translate_example )
         self.save_card_button.clicked.connect( self.saveCard )
-        self.view_cards_button.clicked.connect( self.viewCards )
+        self.view_cards_button.clicked.connect( self.view_cards )
 
         self.media_player = QMediaPlayer()
 
         # extract the top words in the analyzed file
-        self.loadTopWords()
+        self.load_top_words()
 
         if self.left_section.count() > 0:
             self.left_section.setCurrentRow( 0 )  # select first word by default
-            self.updateExamples()
-            self.displayExample()
+            self.update_examples()
+            self.display_example()
 
-    def loadTopWords( self ):
+    def load_top_words( self ):
         """
         get the list of individual srt subtitles (list index is subtitle number)
         and the word stats for this document;
@@ -232,7 +232,7 @@ class MainWindow( QWidget ):
 
         self.left_section.addItems( self.top_words )
 
-    def updateExamples( self ):
+    def update_examples( self ):
         """
         get the selected word and its associated index in the list
         """
@@ -272,7 +272,7 @@ class MainWindow( QWidget ):
 
         return selected_word, selected_example
 
-    def displayExample( self ):
+    def display_example( self ):
         """
         fill the front text box (upper right) with the original word and the
         selected contextual example where it occurs
@@ -285,7 +285,7 @@ class MainWindow( QWidget ):
         # clear previous translations when displaying a new example
         self.back_text_edit.clear()
 
-    def translateExample( self ):
+    def translate_example( self ):
         """
         initializes a translation thread with the word and example to translate
         when the user clicks "Translate"
@@ -300,10 +300,10 @@ class MainWindow( QWidget ):
         self.translation_thread = TranslationThread( selected_word + "\n\n" +
                                                      selected_example )
 
-        self.translation_thread.translation_done.connect( self.onTranslationDone )
+        self.translation_thread.translation_done.connect( self.on_translation_done )
         self.translation_thread.start()
 
-    def onTranslationDone( self, translated_text ):
+    def on_translation_done( self, translated_text ):
         """
         gets called whenever the translation thread has finished its job
 
@@ -323,7 +323,7 @@ class MainWindow( QWidget ):
         # this signal is used by tests
         self.translation_complete.emit()
 
-    def listenToExample( self ):
+    def listen_to_example( self ):
         """
         TODO:
         """
@@ -333,10 +333,10 @@ class MainWindow( QWidget ):
         selected_word, selected_example = self.get_current_word_and_example()
         self.audio_thread = AudioThread( selected_word + ". " + selected_example,
                                          "tmp-audio.mp3" )
-        self.audio_thread.audio_done.connect( self.onAudioReady )
+        self.audio_thread.audio_done.connect( self.on_audio_ready )
         self.audio_thread.start()
 
-    def onAudioReady( self ):
+    def on_audio_ready( self ):
         """
         TODO:
         """
@@ -359,6 +359,7 @@ class MainWindow( QWidget ):
         self.listen_button.setText( "Listen" )
         self.listen_button.setEnabled( True )
 
+    # override
     def keyPressEvent(self, event):
         """
         override parent class's method that is called when user presses keys
@@ -369,9 +370,9 @@ class MainWindow( QWidget ):
         if ( ( event.modifiers() == Qt.ControlModifier or
                event.modifiers() == Qt.MetaModifier) and
              event.key() == Qt.Key_B ):
-            self.toggleBold()
+            self.toggle_bold()
 
-    def toggleBold( self ):
+    def toggle_bold( self ):
         """
         makes selected text bold
         """
@@ -403,9 +404,9 @@ class MainWindow( QWidget ):
             new_flashcard = Flashcard( front_text, back_text )
             self.flashcards.append( new_flashcard )
 
-    def viewCards(self):
+    def view_cards(self):
         self.flashcard_viewer = FlashcardViewer( self.flashcards )
-        self.flashcard_viewer.viewer.exec_()
+        self.flashcard_viewer.exec_()
 
 def select_subtitle_file():
     """
