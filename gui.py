@@ -10,13 +10,20 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QPushButton,
     QFileDialog,
-    QMessageBox
+    QMessageBox,
+    QDialog,
+    QTableWidget,
+    QTableWidgetItem,
+    QAbstractItemView,
+    QHeaderView,
+    QSizePolicy
 )
 from PyQt5.QtGui import QTextOption, QFont
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
-from extract_words import srt_subtitles, get_doc_word_stats, separate_fpath
 from googletrans import Translator
 from gtts import gTTS
+
+from extract_words import srt_subtitles, get_doc_word_stats, separate_fpath
 
 # initialize translator (for translating to Romanian)
 translator = Translator()
@@ -57,12 +64,91 @@ class TranslationThread( QThread ):
                                                 dest="ro" ).text
         self.translation_done.emit( translated_text )
 
+class Flashcard:
+    """
+    TODO:
+    """
+    def __init__(self, front, back):
+        self.front = front
+        self.back = back
+
+class FlashcardViewer( QDialog ):
+    """
+    TODO:
+    """
+    def __init__( self, flashcards ):
+        super().__init__()
+        self.setWindowTitle( "Flashcards" )
+        self.setGeometry( 200, 200, 500, 400 )
+        self.flashcards = flashcards
+
+        layout = QVBoxLayout()
+
+        self.flashcards_table = QTableWidget()
+        self.flashcards_table.setColumnCount( 2 )
+        self.flashcards_table.setHorizontalHeaderLabels( [ "Select", "Flashcard" ] )
+        self.flashcards_table.setColumnWidth( 0, 50 )
+        self.flashcards_table.setColumnWidth( 1, 450 )
+        self.flashcards_table.verticalHeader().setVisible( False )
+        self.flashcards_table.setSelectionMode( QAbstractItemView.NoSelection )
+        self.flashcards_table.horizontalHeader().setSectionResizeMode( 1, QHeaderView.Stretch )
+
+        self.load_flashcards( flashcards )
+
+        layout.addWidget( self.flashcards_table )
+
+        self.delete_button = QPushButton( "Delete Selected" )
+        self.delete_button.clicked.connect( self.delete_selected )
+        layout.addWidget( self.delete_button )
+
+        self.setLayout( layout )
+
+    def load_flashcards( self, flashcards ):
+        self.flashcards_table.setRowCount( len( flashcards ) )
+        for index, flashcard in enumerate( flashcards ):
+            checkbox_item = QTableWidgetItem()
+            checkbox_item.setFlags( Qt.ItemIsUserCheckable | Qt.ItemIsEnabled )
+            checkbox_item.setCheckState( Qt.Unchecked )
+            self.flashcards_table.setItem( index, 0, checkbox_item )
+
+            flashcard_html = f"{flashcard.front}<br>{flashcard.back}"
+            flashcard_text_edit = QTextEdit()
+            flashcard_text_edit.setHtml( flashcard_html )
+            flashcard_text_edit.setReadOnly( True )
+            flashcard_text_edit.setWordWrapMode( QTextOption.WrapAtWordBoundaryOrAnywhere )
+            flashcard_text_edit.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding )
+            self.flashcards_table.setCellWidget( index, 1, flashcard_text_edit )
+
+            # Adjust the row height based on content
+            flashcard_text_edit.document().setTextWidth( self.flashcards_table.columnWidth( 1 ) )
+            row_height = int(  flashcard_text_edit.document().size().height() + 10  )
+            self.flashcards_table.setRowHeight( index, row_height )
+
+    def delete_selected( self ):
+        rows_to_delete = []
+        for row in range( self.flashcards_table.rowCount() ):
+            if self.flashcards_table.item( row, 0 ).checkState() == Qt.Checked:
+                rows_to_delete.append( row )
+
+        for row in sorted( rows_to_delete, reverse=True ):
+            self.flashcards_table.removeRow( row )
+            del self.flashcards[ row ]
+
 class MainWindow( QWidget ):
     translation_complete = pyqtSignal()
 
     def __init__( self, sub_fpath ):
         super().__init__()
         self.sub_fpath = sub_fpath
+
+        self.flashcards = []
+        self.doc_word_stats = None
+        self.srt_subtitles = None
+        self.top_words = None
+        self.translation_thread = None
+        self.audio_thread = None
+        self.flashcard_viewer = None
+
         self.initUI()
 
     def initUI( self ):
@@ -87,10 +173,18 @@ class MainWindow( QWidget ):
         self.front_text_edit = QTextEdit()
         self.back_text_edit = QTextEdit()
 
+        # Add Save and View buttons
+        save_view_button_layout = QHBoxLayout()
+        self.save_card_button = QPushButton( "Save card" )
+        self.view_cards_button = QPushButton( "View cards" )
+        save_view_button_layout.addWidget( self.save_card_button )
+        save_view_button_layout.addWidget( self.view_cards_button )
+
         # set up right layout
         right_layout.addWidget( self.front_text_edit )
         right_layout.addLayout( button_layout )
         right_layout.addWidget( self.back_text_edit )
+        right_layout.addLayout( save_view_button_layout )
 
         # set up top level layout
         layout.addWidget( self.left_section )
@@ -102,10 +196,8 @@ class MainWindow( QWidget ):
         self.middle_section.itemSelectionChanged.connect( self.displayExample )
         self.listen_button.clicked.connect( self.listenToExample )
         self.translate_button.clicked.connect( self.translateExample )
-
-        self.doc_word_stats = None
-        self.srt_subtitles = None
-        self.top_words = None
+        self.save_card_button.clicked.connect( self.saveCard )
+        self.view_cards_button.clicked.connect( self.viewCards )
 
         self.media_player = QMediaPlayer()
 
@@ -145,13 +237,11 @@ class MainWindow( QWidget ):
         get the selected word and its associated index in the list
         """
 
-        selected_word = self.left_section.currentItem().text()
-        selected_word_idx = self.top_words.index( selected_word )
+        selected_word_idx = self.left_section.currentRow()
 
         # use the index to find the indices of the subtitles where the word occurs
         # in the source subtitle file
         occ_ids = self.doc_word_stats[ selected_word_idx + 1 ][ 1 ][ "word_occ_ids" ]
-
         examples = []
         for i, occ_idx in enumerate( occ_ids ):
             example = self.srt_subtitles[ occ_idx ] + "\n"
@@ -305,6 +395,17 @@ class MainWindow( QWidget ):
     def clean_up_temp_audio():
         if os.path.isfile( "tmp-audio.mp3" ):
             os.unlink( "tmp-audio.mp3" )
+
+    def saveCard( self ):
+        front_text = self.front_text_edit.toHtml()
+        back_text = self.back_text_edit.toHtml()
+        if front_text and back_text:
+            new_flashcard = Flashcard( front_text, back_text )
+            self.flashcards.append( new_flashcard )
+
+    def viewCards(self):
+        self.flashcard_viewer = FlashcardViewer( self.flashcards )
+        self.flashcard_viewer.viewer.exec_()
 
 def select_subtitle_file():
     """
