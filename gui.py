@@ -16,7 +16,8 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem,
     QAbstractItemView,
     QHeaderView,
-    QSizePolicy
+    QSizePolicy,
+    QLabel
 )
 from PyQt5.QtGui import QTextOption, QFont
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
@@ -24,6 +25,10 @@ from googletrans import Translator
 from gtts import gTTS
 
 from extract_words import srt_subtitles, get_doc_word_stats, separate_fpath
+from export import Flashcard, export_to_anki
+
+# deployment-specific data: the target user Decks
+from user_data import USER_DECKS
 
 # initialize translator (for translating to Romanian)
 translator = Translator()
@@ -63,14 +68,6 @@ class TranslationThread( QThread ):
                                                 src="en",
                                                 dest="ro" ).text
         self.translation_done.emit( translated_text )
-
-class Flashcard:
-    """
-    TODO:
-    """
-    def __init__(self, front, back):
-        self.front = front
-        self.back = back
 
 class FlashcardViewer( QDialog ):
     """
@@ -173,18 +170,32 @@ class MainWindow( QWidget ):
         self.front_text_edit = QTextEdit()
         self.back_text_edit = QTextEdit()
 
-        # Add Save and View buttons
+        # add save and view buttons
         save_view_button_layout = QHBoxLayout()
         self.save_card_button = QPushButton( "Save card" )
         self.view_cards_button = QPushButton( "View cards" )
         save_view_button_layout.addWidget( self.save_card_button )
         save_view_button_layout.addWidget( self.view_cards_button )
 
+        # flashcard counter and export button
+        counter_export_layout = QHBoxLayout()
+        self.flashcard_counter = QLabel( "0" )
+        self.export_button = QPushButton( "Export" )
+        self.export_button.setEnabled( False )
+        counter_export_layout.addWidget( QLabel( "Flashcards:" ) )
+        counter_export_layout.addWidget( self.flashcard_counter )
+        counter_export_layout.addWidget( self.export_button )
+
+        # combine save/view and counter/export layouts
+        save_view_counter_export_layout = QVBoxLayout()
+        save_view_counter_export_layout.addLayout( save_view_button_layout )
+        save_view_counter_export_layout.addLayout( counter_export_layout )
+
         # set up right layout
         right_layout.addWidget( self.front_text_edit )
         right_layout.addLayout( button_layout )
         right_layout.addWidget( self.back_text_edit )
-        right_layout.addLayout( save_view_button_layout )
+        right_layout.addLayout( save_view_counter_export_layout )
 
         # set up top level layout
         layout.addWidget( self.left_section )
@@ -196,8 +207,9 @@ class MainWindow( QWidget ):
         self.middle_section.itemSelectionChanged.connect( self.display_example )
         self.listen_button.clicked.connect( self.listen_to_example )
         self.translate_button.clicked.connect( self.translate_example )
-        self.save_card_button.clicked.connect( self.saveCard )
+        self.save_card_button.clicked.connect( self.save_card )
         self.view_cards_button.clicked.connect( self.view_cards )
+        self.export_button.clicked.connect( self.export_flashcards )
 
         self.media_player = QMediaPlayer()
 
@@ -376,7 +388,6 @@ class MainWindow( QWidget ):
         """
         makes selected text bold
         """
-
         editor = self.focusWidget()  # Get the currently focused widget
 
         if isinstance( editor, QTextEdit ):
@@ -394,25 +405,48 @@ class MainWindow( QWidget ):
 
     @staticmethod
     def clean_up_temp_audio():
+        """
+        TODO:
+        """
         if os.path.isfile( "tmp-audio.mp3" ):
             os.unlink( "tmp-audio.mp3" )
 
-    def saveCard( self ):
+    def save_card( self ):
+        """
+        TODO:
+        """
         front_text = self.front_text_edit.toHtml()
         back_text = self.back_text_edit.toHtml()
         if front_text and back_text:
             new_flashcard = Flashcard( front_text, back_text )
             self.flashcards.append( new_flashcard )
 
+        self.update_flashcard_counter()
+
     def view_cards(self):
+        """
+        TODO:
+        """
         self.flashcard_viewer = FlashcardViewer( self.flashcards )
         self.flashcard_viewer.exec_()
+        self.update_flashcard_counter()
+
+    def update_flashcard_counter(self):
+        """
+        TODO:
+        """
+        self.flashcard_counter.setText( str( len( self.flashcards ) ) )
+        self.export_button.setEnabled( len( self.flashcards ) > 0 )
+
+    def export_flashcards(self):
+        export_to_anki( self.flashcards, USER_DECKS )
+        self.flashcards.clear()
+        self.update_flashcard_counter()
 
 def select_subtitle_file():
     """
     shows user a dialog box prompting for file selection
     """
-
     options = QFileDialog.Options()
     options |= QFileDialog.ReadOnly
     file_dialog = QFileDialog()
