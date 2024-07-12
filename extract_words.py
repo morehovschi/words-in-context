@@ -233,19 +233,22 @@ def process_dir( dirpath ):
     for fname in os.listdir( dirpath ):
         if fname.endswith( '.srt' ):
             analyzables.append( fname )
-    Parallel( n_jobs=-1 )( delayed( analyze_file_subtitle_ids )( dirpath + fname , 'data/' )
-                        for fname in Bar( 'Counting words in files' ).iter( analyzables ) )
+    Parallel( n_jobs=-1 )(
+        delayed( analyze_file_subtitle_ids )(
+            dirpath + fname , 'cached-data/' )
+                 for fname in Bar( 'Counting words in files' ).iter( analyzables )
+                         )
     print( 'elapsed:', time.time() - time0, "\n" )
 
     # dictionary of word count dictionaries for all files in dirpath dir
     corpus_counts = {}
 
     dir_filenames = []
-    for fname in os.listdir( dirpath ):
+    for fname in os.listdir( "cached-data/" ):
         if not fname.endswith( ".json" ):
             continue
 
-        with open( dirpath + fname ) as json_file:
+        with open( "cached-data/" + fname ) as json_file:
             corpus_counts[ separate_fpath( fname )[ 1 ] ] = \
                 json.load( json_file )
 

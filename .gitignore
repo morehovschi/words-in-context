@@ -1,6 +1,5 @@
 **/.DS_Store
 /env
-data/*.json
 **/__pycache__/
 *.swp
 *.apkg
