@@ -36,9 +36,39 @@ def export_to_anki( card_list, decks ):
 
     for j, card in enumerate( card_list ):
         for i, deck in enumerate( decks ):
+            front = card.front
+            back = card.back
+
+            # add styles to the HTML content
+            styled_front = f"""
+            <html>
+            <head>
+            <style>
+            body {{ text-align: center; font-size: 16px; }}
+            </style>
+            </head>
+            <body>
+            {front}
+            </body>
+            </html>
+            """
+
+            styled_back = f"""
+            <html>
+            <head>
+            <style>
+            body {{ text-align: center; font-size: 16px; }}
+            </style>
+            </head>
+            <body>
+            {back}
+            </body>
+            </html>
+            """
+
             note =\
                 genanki.Note( model=MODEL,
-                              fields=[ card.front, card.back ] )
+                              fields=[ styled_front, styled_back ] )
 
             # Anki doesn't like duplicate notes, even if they go into separate
             # decks.
