@@ -150,7 +150,7 @@ class MainWindow( QWidget ):
 
     def initUI( self ):
         self.setWindowTitle( "Subtitle Word Picker" )
-        self.setGeometry( 100, 100, 800, 600 )
+        self.setGeometry( 100, 100, 1000, 600 )
 
         # left and middle layout
         layout = QHBoxLayout( self )
@@ -461,6 +461,8 @@ def select_subtitle_file():
 
 if __name__ == "__main__":
     app = QApplication( sys.argv )
+
+    app.setStyleSheet( "QWidget { font-size: 15px; }" )
 
     sub_fpath = select_subtitle_file()
     if not sub_fpath:
