@@ -22,6 +22,7 @@ from googletrans import Translator
 
 TIMESTAMP_REGEX = "[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}"
 NON_ALPHABET_REGEX = "[^a-zA-Z']"
+TAG_REGEX = re.compile( r"[<|\/<]*.>" )
 
 # check that English language model available, and download if necessary
 # (used for lemmatization)
@@ -84,7 +85,10 @@ def srt_subtitles( fpath ):
             line = line.strip()
 
             if line.isnumeric() and int( line ) == num + 1:
-                subtitles.append( subtitle.strip() )
+                # remove any HTML tags
+                subtitle = re.sub( TAG_REGEX, "", subtitle ).strip()
+
+                subtitles.append( subtitle )
 
                 num +=1
                 timestamp = None
