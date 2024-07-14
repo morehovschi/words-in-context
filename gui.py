@@ -76,7 +76,7 @@ class FlashcardViewer( QDialog ):
     def __init__( self, flashcards ):
         super().__init__()
         self.setWindowTitle( "Flashcards" )
-        self.setGeometry( 100, 100, 1100, 500 )
+        self.setGeometry( 100, 100, 1100, 600 )
         self.flashcards = flashcards
 
         layout = QVBoxLayout()
@@ -99,6 +99,10 @@ class FlashcardViewer( QDialog ):
         layout.addWidget( self.delete_button )
 
         self.setLayout( layout )
+
+        self.flashcards_table.setStyleSheet(
+            "QHeaderView::section { font-size: 14px; }"
+        )
 
     def load_flashcards( self, flashcards ):
         self.flashcards_table.setRowCount( len( flashcards ) )
@@ -150,7 +154,7 @@ class MainWindow( QWidget ):
 
     def initUI( self ):
         self.setWindowTitle( "Subtitle Word Picker" )
-        self.setGeometry( 50, 50, 1200, 600 )
+        self.setGeometry( 50, 50, 1200, 700 )
 
         # left and middle layout
         layout = QHBoxLayout( self )
@@ -465,7 +469,7 @@ def select_subtitle_file():
 if __name__ == "__main__":
     app = QApplication( sys.argv )
 
-    app.setStyleSheet( "QWidget { font-size: 16px; }" )
+    app.setStyleSheet( "QWidget { font-size: 17px; }" )
 
     sub_fpath = select_subtitle_file()
     if not sub_fpath:
