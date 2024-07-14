@@ -292,6 +292,9 @@ class MainWindow( QWidget ):
 
         selected_word, selected_example = self.get_current_word_and_example()
         front_text = selected_word + "\n\n" + selected_example
+
+        self.front_text_edit.clear()
+        self.front_text_edit.setFontWeight( QFont.Normal )
         self.front_text_edit.setPlainText( front_text )
 
         # clear previous translations when displaying a new example
