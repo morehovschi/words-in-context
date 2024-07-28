@@ -334,7 +334,12 @@ class MainWindow( QWidget ):
         translated_word, translated_example = translated_text.split( "\n\n" )
         translated_word = translated_word.lower()
 
-        self.back_text_edit.setText( translated_word + "\n\n" + translated_example )
+        # on Windows, the font weight is sometimes bold after the user previously
+        # marked certain words as bold; reset the font weight here
+        self.back_text_edit.setFontWeight( QFont.Normal )
+
+        self.back_text_edit.setPlainText(
+            translated_word + "\n\n" + translated_example )
 
         self.translate_button.setText( "Translate" )
         self.translate_button.setEnabled( True )
