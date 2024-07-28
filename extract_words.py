@@ -164,7 +164,7 @@ def count_words( fpath ):
 
                 if lemma in word_subtitle_ids:
                     word_subtitle_ids[ lemma ].append( sub_number )
-                else:
+                elif lemma:  # only add new lemma if not empty string
                      word_subtitle_ids[ lemma ] = [ sub_number ]
 
                 # if word is upper case, it is possibly a name

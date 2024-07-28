@@ -26,7 +26,7 @@ class TestMainMenuIO( unittest.TestCase ):
     @patch( "builtins.input", side_effect=[ "", "f", "q" ] )
     def test_quit( self, mock_input, mock_stdout ):
         expected_lines =[
-    '1. "george". count in doc: 217. docs containing word: 4. tf-idf: 1.12E-02',
+    '1. "bailey". count in doc: 75. docs containing word: 1. tf-idf: 9.77E-03',
     '10. "sam". count in doc: 25. docs containing word: 2. tf-idf: 2.28E-03',
     '20. "zuzu". count in doc: 13. docs containing word: 1. tf-idf: 1.69E-03',
     'Options:',
@@ -78,7 +78,7 @@ class TestMainMenuIO( unittest.TestCase ):
     @patch( "builtins.input", side_effect=[ "", "f", "q"] )
     def test_name_filtering_integration( self, mock_input, mock_stdout ):
         expected_lines =[
-    '1. "george". count in doc: 217. docs containing word: 4. tf-idf: 1.12E-02',
+    '1. "bailey". count in doc: 75. docs containing word: 1. tf-idf: 9.77E-03',
     '10. "sam". count in doc: 25. docs containing word: 2. tf-idf: 2.28E-03',
     '20. "zuzu". count in doc: 13. docs containing word: 1. tf-idf: 1.69E-03',
     'Note: name filtering is currently disabled.',
@@ -96,7 +96,7 @@ class TestMainMenuIO( unittest.TestCase ):
         # sets window size to 1,200 and then hits next once, which should reach
         # the last word in the file, at 1,601
         expected_lines =[
-    '1601. "ahead". count in doc: 1. docs containing word: 10. tf-idf: 0.00E+00',
+    '1600. "ahead". count in doc: 1. docs containing word: 10. tf-idf: 0.00E+00',
         ]
         self._run_test( mock_stdout, expected_lines )
 
@@ -107,7 +107,7 @@ class TestMainMenuIO( unittest.TestCase ):
         output = mock_stdout.getvalue()
 
         first_line =\
-    '1. "george". count in doc: 217. docs containing word: 4. tf-idf: 1.12E-02'
+    '1. "bailey". count in doc: 75. docs containing word: 1. tf-idf: 9.77E-03'
         
         # testing that the line appears twice effectively tests the "previous"
         # functionality, as the line was first printed by default, and then a
