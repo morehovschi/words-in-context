@@ -16,10 +16,10 @@ class TestSeparateFpath( unittest.TestCase ):
 
         separated = separate_fpath( fpath )
 
-        self.assertEquals( separated[ 0 ], "data/" )
-        self.assertEquals( separated[ 1 ],
-                           "It's.A.Wonderful.Life.1946.WEBRip.Amazon" )
-        self.assertEquals( separated[ 2 ], ".srt" )
+        self.assertEqual( separated[ 0 ], "data/" )
+        self.assertEqual( separated[ 1 ],
+                          "It's.A.Wonderful.Life.1946.WEBRip.Amazon" )
+        self.assertEqual( separated[ 2 ], ".srt" )
 
 if __name__ == "__main__":
     unittest.main()

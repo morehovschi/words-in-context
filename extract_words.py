@@ -210,7 +210,7 @@ def analyze_file_subtitle_ids( fpath, cache_path="" ):
     they occur; if unsuccessful, creates that dictionary and saves it
     """
 
-    fname = fpath[ fpath.rfind( '/' )+1:fpath.find( '.' ) ]
+    fname = separate_fpath( fpath )[ 1 ]
 
     try:
         with open( cache_path + fname + '.json' ) as json_file:
