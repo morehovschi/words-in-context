@@ -48,8 +48,8 @@ def separate_fpath( fpath ):
     """ convenience method to separate directory name, file name and extension """
 
     dir_path = fpath[ :fpath.rfind( '/' ) + 1 ]
-    fname = fpath[ fpath.rfind( '/' ) + 1:fpath.find( '.' ) ]
-    extension = fpath[ fpath.find( '.' ): ]
+    fname = fpath[ fpath.rfind( '/' ) + 1:fpath.rfind( '.' ) ]
+    extension = fpath[ fpath.rfind( '.' ): ]
 
     return dir_path, fname, extension
 
