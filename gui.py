@@ -17,7 +17,8 @@ from PyQt5.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
     QSizePolicy,
-    QLabel
+    QLabel,
+    QCheckBox
 )
 from PyQt5.QtGui import QTextOption, QFont
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
@@ -163,9 +164,16 @@ class MainWindow( QWidget ):
         self.setWindowTitle( "Subtitle Word Picker" )
         self.setGeometry( 50, 50, 1200, 700 )
 
-        # left and middle layout
-        layout = QHBoxLayout( self )
-        self.left_section = QListWidget()
+        # left layout
+        self.left_section = QVBoxLayout()
+        self.word_list = QListWidget()
+        self.nf_button = QCheckBox()
+        self.nf_button.setChecked( self.name_filtering )
+        self.nf_button.setText( "Name filtering enabled" )
+        self.left_section.addWidget( self.word_list )
+        self.left_section.addWidget( self.nf_button )
+
+        # middle layout
         self.middle_section = QListWidget()
         self.middle_section.setWordWrap( QTextOption.WordWrap )
 
@@ -176,19 +184,16 @@ class MainWindow( QWidget ):
         button_layout.addWidget( self.listen_button )
         button_layout.addWidget( self.translate_button )
 
-        # right section layout
-        right_layout = QVBoxLayout()
-        self.front_text_edit = QTextEdit()
-        self.back_text_edit = QTextEdit()
+        # initialize the elements for the right section
 
-        # add save and view buttons
+        # 1. add save and view buttons
         save_view_button_layout = QHBoxLayout()
         self.save_card_button = QPushButton( "Save card" )
         self.view_cards_button = QPushButton( "View cards" )
         save_view_button_layout.addWidget( self.save_card_button )
         save_view_button_layout.addWidget( self.view_cards_button )
 
-        # flashcard counter and export button
+        # 2. flashcard counter and export button
         counter_export_layout = QHBoxLayout()
         self.flashcard_counter = QLabel( "0" )
         self.export_button = QPushButton( "Export" )
@@ -197,24 +202,30 @@ class MainWindow( QWidget ):
         counter_export_layout.addWidget( self.flashcard_counter )
         counter_export_layout.addWidget( self.export_button )
 
-        # combine save/view and counter/export layouts
+        # 3. combine save/view and counter/export layouts
         save_view_counter_export_layout = QVBoxLayout()
         save_view_counter_export_layout.addLayout( save_view_button_layout )
         save_view_counter_export_layout.addLayout( counter_export_layout )
 
-        # set up right layout
+        # set up right layout combining the elements above
+        right_layout = QVBoxLayout()
+        self.front_text_edit = QTextEdit()
+        self.back_text_edit = QTextEdit()
         right_layout.addWidget( self.front_text_edit )
         right_layout.addLayout( button_layout )
         right_layout.addWidget( self.back_text_edit )
         right_layout.addLayout( save_view_counter_export_layout )
 
         # set up top level layout
-        layout.addWidget( self.left_section )
+        layout = QHBoxLayout( self )
+        layout.addLayout( self.left_section )
         layout.addWidget( self.middle_section )
         layout.addLayout( right_layout )
 
         # connect signals and slots
-        self.left_section.itemSelectionChanged.connect( self.update_examples )
+        self.nf_button.toggled.connect( self.toggle_name_filtering )
+        self.word_list.itemSelectionChanged.connect(
+            self.update_examples )
         self.middle_section.itemSelectionChanged.connect( self.display_example )
         self.listen_button.clicked.connect( self.listen_to_example )
         self.translate_button.clicked.connect( self.translate_example )
@@ -227,10 +238,22 @@ class MainWindow( QWidget ):
         # extract the top words in the analyzed file
         self.load_top_words()
 
-        if self.left_section.count() > 0:
-            self.left_section.setCurrentRow( 0 )  # select first word by default
+        if self.word_list.count() > 0:
+            self.word_list.setCurrentRow( 0 )  # select first word by default
             self.update_examples()
             self.display_example()
+
+    def toggle_name_filtering( self ):
+        """
+        gets called when user checks/unchecks "Name filtering"
+        """
+        self.name_filtering = self.nf_button.isChecked()
+        self.load_top_words()
+        if self.word_list.count() > 0:
+            self.word_list.setCurrentRow( 0 )  # select first word by default
+            self.update_examples()
+            self.display_example()
+
 
     def load_top_words( self ):
         """
@@ -252,18 +275,19 @@ class MainWindow( QWidget ):
                                                   self.name_filtering,
                                                   corpus=self.corpus )
 
+        self.word_list.clear()
         self.top_words = []
         for i, word_stats in enumerate( self.doc_word_stats[ 1: ] ):
             self.top_words.append( f'{ i+1 }.  "{ word_stats[ 0 ] }"' )
 
-        self.left_section.addItems( self.top_words )
+        self.word_list.addItems( self.top_words )
 
     def update_examples( self ):
         """
         get the selected word and its associated index in the list
         """
 
-        selected_word_idx = self.left_section.currentRow()
+        selected_word_idx = self.word_list.currentRow()
 
         # use the index to find the indices of the subtitles where the word occurs
         # in the source subtitle file
@@ -285,7 +309,7 @@ class MainWindow( QWidget ):
         and its corresponding example
         """
 
-        selected_word = self.left_section.currentItem().text()
+        selected_word = self.word_list.currentItem().text()
         # unpack the word to only the contents of the quotation marks
         # ex. '8. "wing"' -> 'wing'
         selected_word = selected_word[ selected_word.find( '"' ) + 1 :
