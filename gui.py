@@ -24,7 +24,12 @@ from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from googletrans import Translator
 from gtts import gTTS
 
-from extract_words import srt_subtitles, get_doc_word_stats, separate_fpath
+from extract_words import (
+    srt_subtitles,
+    get_doc_word_stats,
+    separate_fpath,
+    process_dir
+)
 from export import Flashcard, export_to_anki
 
 # deployment-specific data: the target user Decks
@@ -149,6 +154,8 @@ class MainWindow( QWidget ):
         self.translation_thread = None
         self.audio_thread = None
         self.flashcard_viewer = None
+        self.corpus = None  # whole word corpus for all subtitle files
+        self.name_filtering = True
 
         self.initUI()
 
@@ -236,11 +243,14 @@ class MainWindow( QWidget ):
         load time
         """
 
-        name_filtering = True
-
         self.srt_subtitles = srt_subtitles( self.sub_fpath )
         data_path, file, _ = separate_fpath( self.sub_fpath )
-        self.doc_word_stats = get_doc_word_stats( data_path, file, name_filtering )
+
+        if self.corpus is None:
+            self.corpus = process_dir( data_path )
+        self.doc_word_stats = get_doc_word_stats( data_path, file,
+                                                  self.name_filtering,
+                                                  corpus=self.corpus )
 
         self.top_words = []
         for i, word_stats in enumerate( self.doc_word_stats[ 1: ] ):

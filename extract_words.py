@@ -245,7 +245,7 @@ def process_dir( dirpath ):
     print( 'elapsed:', time.time() - time0, "\n" )
 
     # dictionary of word count dictionaries for all files in dirpath dir
-    corpus_counts = {}
+    corpus = {}
 
     dir_filenames = []
     for fname in os.listdir( "cached-data/" ):
@@ -253,12 +253,12 @@ def process_dir( dirpath ):
             continue
 
         with open( "cached-data/" + fname ) as json_file:
-            corpus_counts[ separate_fpath( fname )[ 1 ] ] = \
+            corpus[ separate_fpath( fname )[ 1 ] ] = \
                 json.load( json_file )
 
-    return corpus_counts
+    return corpus
 
-def get_doc_word_stats( data_path, file, name_filtering=False ):
+def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None ):
     """
     given a path to a data directory and the name of a file in it, loads data about
     word occurrences in all files (or, if unavailable, computes and saves it), and
@@ -270,34 +270,36 @@ def get_doc_word_stats( data_path, file, name_filtering=False ):
     how often the word occurs in this doc, how many other docs it occurs in etc.
     """
     # dictionary of word count dictionaries for all files in data_path dir
-    corpus_counts = process_dir( data_path )
+    if corpus is None:
+        corpus = process_dir( data_path )
+
+    word_collection = corpus[ file ][ "wsid" ]
+    likely_names = corpus[ file ][ "likely_names" ]
 
     doc_word_stats = []
-    doc = corpus_counts[ file ][ "wsid" ]
-    likely_names = corpus_counts[ file ][ "likely_names" ]
 
-    for word in doc:
+    for word in word_collection:
         if word == "__total__":
             continue
 
         word_stats = {}
 
-        word_stats[ 'count' ] = len( doc[ word ] )
-        word_stats[ 'words_in_doc' ] = doc[ '__total__']
+        word_stats[ 'count' ] = len( word_collection[ word ] )
+        word_stats[ 'words_in_doc' ] = word_collection[ '__total__']
         word_stats[ 'frequency' ] = word_stats[ 'count' ] /\
                                         word_stats[ 'words_in_doc' ]
         word_stats[ 'word_occs_in_docs' ] = 0
-        word_stats[ 'word_occ_ids' ] = doc[ word ]
+        word_stats[ 'word_occ_ids' ] = word_collection[ word ]
 
-        for other_doc_name, other_doc in corpus_counts.items():
+        for other_doc_name, other_doc in corpus.items():
             if word in other_doc[ "wsid" ]:
                 word_stats[ 'word_occs_in_docs' ] += 1
 
         word_stats[ 'tf-idf' ] = word_stats[ 'frequency' ] *\
-            math.log( len( corpus_counts ) / word_stats[ 'word_occs_in_docs' ] )
+            math.log( len( corpus ) / word_stats[ 'word_occs_in_docs' ] )
 
         # tank the TF-IDF score of any word that has been deemed a likely name;
-        # it is most likely irrelevant to a lanugage learner watching the movie
+        # it is most likely irrelevant to a language learner watching the movie
         if name_filtering and ( word in likely_names ):
             word_stats[ 'tf-idf' ] = 0
 
