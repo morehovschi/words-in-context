@@ -106,9 +106,18 @@ class FlashcardViewer( QDialog ):
 
         self.setLayout( layout )
 
-        self.flashcards_table.setStyleSheet(
-            "QHeaderView::section { font-size: 14px; }"
-        )
+        # Apply style sheet for brighter borders
+        self.flashcards_table.setStyleSheet( """
+            QTableWidget {
+                border: none;
+            }
+            QTableWidget::item {
+                border: 1px solid #888;  /* Bright grey border */
+            }
+            QHeaderView::section {
+                font-size: 14px;
+            }
+        """ )
 
     def load_flashcards( self, flashcards ):
         self.flashcards_table.setRowCount( len( flashcards ) )
@@ -118,12 +127,27 @@ class FlashcardViewer( QDialog ):
             checkbox_item.setCheckState( Qt.Unchecked )
             self.flashcards_table.setItem( index, 0, checkbox_item )
 
-            flashcard_html = f"{flashcard.front}<br>{flashcard.back}"
+            flashcard_html = f"""
+            <div style="margin-bottom: 5px;">{flashcard.front}</div>
+            <hr style="border: 1px solid #bbb;">
+            <div style="margin-top: 5px;">{flashcard.back}</div>
+            """
             flashcard_text_edit = QTextEdit()
             flashcard_text_edit.setHtml( flashcard_html )
             flashcard_text_edit.setReadOnly( True )
             flashcard_text_edit.setWordWrapMode( QTextOption.WrapAtWordBoundaryOrAnywhere )
             flashcard_text_edit.setSizePolicy( QSizePolicy.Expanding, QSizePolicy.Expanding )
+
+            # Set the border for QTextEdit (flashcard content) to be brighter grey
+            flashcard_text_edit.setStyleSheet( """
+                QTextEdit {
+                    border: 1px solid #888;  /* Bright grey border */
+                    background-color: #2e2e2e; /* Assuming a dark background color */
+                    color: white; /* Text color */
+                    padding: 5px; /* Add padding to avoid content touching the border */
+                }
+            """ )
+
             self.flashcards_table.setCellWidget( index, 1, flashcard_text_edit )
 
             # Adjust the row height based on content
