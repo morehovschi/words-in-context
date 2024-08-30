@@ -24,6 +24,7 @@ TIMESTAMP_REGEX = "[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-
 NON_ALPHABET_REGEX = "[^a-zA-Z']"
 TAG_REGEX = re.compile( r"[<|\/<]*.>" )
 
+# LANGSPEC
 # check that English language model available, and download if necessary
 # (used for lemmatization)
 if "en_core_web_sm" not in spacy.cli.info()[ "pipelines" ]:
@@ -90,7 +91,7 @@ def srt_subtitles( fpath ):
 
                 subtitles.append( subtitle )
 
-                num +=1
+                num += 1
                 timestamp = None
                 subtitle = ""
             elif re.search( TIMESTAMP_REGEX, line ):
@@ -117,6 +118,7 @@ def count_words( fpath ):
            values here are lists of ids of the word within the occurring sentence.
     """
 
+    # LANGSPEC
     # load English language model, for lemmatization;
     #
     # this function is called in parallel, so each of its instances needs to load
@@ -365,6 +367,7 @@ def word_occurrence_menu( word, occ_ids, subtitles ):
             print( f"Selected sentence:\n \"{ subtitles[ occ_ids[ idx - 1 ] ] }\"" )
             print( "\nTranslating...", end="", flush=True )
 
+            # LANGSPEC
             translated = translator.translate( subtitles[ occ_ids[ idx - 1 ] ],
                                                src="en", dest="ro" ).text
 
@@ -513,8 +516,9 @@ def main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
 
                 print_instructions( name_filtering_enabled )
             else:
-                print( "Selection not understood – please try again. Make sure to "\
-                       "type the\nword exactly as it appears above, or simply introduce its number." )
+                print( "Selection not understood – please try again. Make sure to "
+                       "type the\nword exactly as it appears above, or simply "
+                       "introduce its number." )
 
 def main( argv ):
     if len( argv ) < 2:
@@ -540,9 +544,11 @@ def main( argv ):
     subtitles = srt_subtitles( data_dir_path + fname_srt )
 
     # extract stats for the current doc and sort by tf-idf descendingly
-    doc_word_stats = get_doc_word_stats( data_dir_path, fname, name_filtering_enabled )
+    doc_word_stats = get_doc_word_stats( data_dir_path, fname,
+                                         name_filtering_enabled )
 
-    main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path, name_filtering_enabled )
+    main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
+               name_filtering_enabled )
 
 if __name__ == "__main__":
     main( sys.argv )

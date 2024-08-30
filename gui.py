@@ -55,6 +55,7 @@ class AudioThread( QThread ):
         if os.path.isfile( self.audio_filename ):
             os.unlink( self.audio_filename )
 
+        # LANGSPEC
         audio = gTTS( text=self.source_text, lang="en", slow=False )
         audio.save( self.audio_filename )
         self.audio_done.emit()
@@ -70,6 +71,7 @@ class TranslationThread( QThread ):
         self.text_to_translate = text_to_translate
 
     def run( self ):
+        # LANGSPEC
         translated_text = translator.translate( self.text_to_translate,
                                                 src="en",
                                                 dest="ro" ).text
