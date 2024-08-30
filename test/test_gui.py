@@ -43,7 +43,7 @@ class TestTranslation( unittest.TestCase ):
         """
 
         top_word_list = self.main_window.word_list
-        example_list = self.main_window.middle_section
+        example_list = self.main_window.example_list
         translate_button = self.main_window.translate_button
 
         # Select the fifth item in the top word list
@@ -108,7 +108,7 @@ class TestNameFiltering( unittest.TestCase ):
         """
 
         top_word_list = self.main_window.word_list
-        example_list = self.main_window.middle_section
+        example_list = self.main_window.example_list
 
         # expected content for name filtering enabled (by default)
         name_filtered_top20 = [

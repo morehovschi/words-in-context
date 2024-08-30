@@ -198,8 +198,14 @@ class MainWindow( QWidget ):
         self.left_section.addWidget( self.nf_button )
 
         # middle layout
-        self.middle_section = QListWidget()
-        self.middle_section.setWordWrap( QTextOption.WordWrap )
+        self.middle_section = QVBoxLayout()
+        self.info_label = QLabel()
+        self.example_list = QListWidget()
+        self.blank_row = QLabel("")
+        self.example_list.setWordWrap( QTextOption.WordWrap )
+        self.middle_section.addWidget( self.info_label )
+        self.middle_section.addWidget( self.example_list )
+        self.middle_section.addWidget( self.blank_row )
 
         # layout for the two buttons in the right section
         button_layout = QHBoxLayout()
@@ -243,14 +249,14 @@ class MainWindow( QWidget ):
         # set up top level layout
         layout = QHBoxLayout( self )
         layout.addLayout( self.left_section )
-        layout.addWidget( self.middle_section )
+        layout.addLayout( self.middle_section )
         layout.addLayout( right_layout )
 
         # connect signals and slots
         self.nf_button.toggled.connect( self.toggle_name_filtering )
         self.word_list.itemSelectionChanged.connect(
             self.update_examples )
-        self.middle_section.itemSelectionChanged.connect( self.display_example )
+        self.example_list.itemSelectionChanged.connect( self.display_example )
         self.listen_button.clicked.connect( self.listen_to_example )
         self.translate_button.clicked.connect( self.translate_example )
         self.save_card_button.clicked.connect( self.save_card )
@@ -312,20 +318,30 @@ class MainWindow( QWidget ):
         """
 
         selected_word_idx = self.word_list.currentRow()
+        selected_word_stats = self.doc_word_stats[ selected_word_idx + 1 ][ 1 ]
+
+        # update label at the top of middle section with stats about word in the doc
+        self.info_label.setText(
+            '<div style="line-height: 1.15;">'
+            f'Count in this doc: {selected_word_stats["count"]}<br>'
+            f'Docs containing word: {selected_word_stats["word_occs_in_docs"]}<br>'
+            f'TF-IDF: {selected_word_stats["tf-idf"]:.2E}'
+            '</div>'
+        )
 
         # use the index to find the indices of the subtitles where the word occurs
         # in the source subtitle file
-        occ_ids = self.doc_word_stats[ selected_word_idx + 1 ][ 1 ][ "word_occ_ids" ]
+        occ_ids = selected_word_stats[ "word_occ_ids" ]
         examples = []
         for i, occ_idx in enumerate( occ_ids ):
             example = self.srt_subtitles[ occ_idx ] + "\n"
             examples.append( f"{ i+1 }.  " + example )
 
-        self.middle_section.clear()
-        self.middle_section.addItems( examples )
+        self.example_list.clear()
+        self.example_list.addItems( examples )
 
-        if self.middle_section.count() > 0:
-            self.middle_section.setCurrentRow( 0 )  # select first example by default
+        if self.example_list.count() > 0:
+            self.example_list.setCurrentRow( 0 )  # select first example by default
 
     def get_current_word_and_example( self ):
         """
@@ -339,7 +355,7 @@ class MainWindow( QWidget ):
         selected_word = selected_word[ selected_word.find( '"' ) + 1 :
                                        selected_word.rfind( '"' ) ]
 
-        selected_example = self.middle_section.currentItem().text()
+        selected_example = self.example_list.currentItem().text()
         # trim example number from the beginning
         selected_example =\
             selected_example[ selected_example.find( "." ) + 1 : ].strip()
