@@ -2,13 +2,13 @@ import sys
 import os
 import unittest
 
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QDialogButtonBox
 from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt
 
 # sys path manipulation necessary for importing class defined in parent dir
 sys.path.insert( 0, os.getcwd() )
-from gui import MainWindow
+from gui import MainWindow, LanguageSelectionDialog
 
 class TestTranslation( unittest.TestCase ):
     """
@@ -46,13 +46,13 @@ class TestTranslation( unittest.TestCase ):
         example_list = self.main_window.example_list
         translate_button = self.main_window.translate_button
 
-        # Select the fifth item in the top word list
+        # select the fifth item in the top word list
         QTest.mouseClick(
             top_word_list.viewport(),
             Qt.LeftButton,
             pos=top_word_list.visualItemRect( top_word_list.item( 4 ) ).center() )
 
-        # Select the fourth example in the example list
+        # select the fourth example in the example list
         QTest.mouseClick(
             example_list.viewport(),
             Qt.LeftButton,
@@ -63,7 +63,7 @@ class TestTranslation( unittest.TestCase ):
 
         QTest.mouseClick( translate_button, Qt.LeftButton )
 
-        # Wait for the translation to complete (up to 60 seconds)
+        # wait for the translation to complete (up to 60 seconds)
         spy.wait( 60000 )
 
         expected_front_text = "scar\n\nI also pointed out that the real Haskell"\
@@ -168,6 +168,51 @@ class TestNameFiltering( unittest.TestCase ):
         for i in range( 20 ):
             self.assertEqual( top_word_list.item( i ).text(),
                               unfiltered_top20[ i ] )
+
+
+class TestLanguageSelectionDialog( unittest.TestCase ):
+    """
+    very basic unit test for the language selection dialog
+
+    simulates inputting two deck names and selecting target and native languages
+    from the drop down menus and verifies that the data is stored into the object
+    """
+    def setUp( self ):
+        # create the application and dialog for testing
+        self.app = QApplication( sys.argv )
+        self.dialog = LanguageSelectionDialog()
+
+    def tearDown( self ):
+        # clean up the dialog and application after tests
+        self.dialog = None
+        self.app = None
+
+    def test_language_selection( self ):
+        # simulate entering deck names
+        QTest.keyClicks( self.dialog.deck_names_edit, "Deck 1, Deck 2" )
+
+        # simulate selecting target language
+        target_language_index =\
+            self.dialog.target_language_combo.findText( "Spanish",
+                                                        Qt.MatchFixedString )
+        self.dialog.target_language_combo.setCurrentIndex( target_language_index )
+
+        # simulate selecting native language
+        native_language_index =\
+            self.dialog.native_language_combo.findText( "Romanian",
+                                                        Qt.MatchFixedString )
+        self.dialog.native_language_combo.setCurrentIndex( native_language_index )
+
+        # simulate clicking the OK button
+        self.dialog.button_box.button( QDialogButtonBox.Ok ).click()
+
+        # get the selection from the dialog
+        deck_names, target_language, native_language = self.dialog.get_selection()
+
+        # assert that the data matches the input
+        self.assertEqual( deck_names, "Deck 1, Deck 2" )
+        self.assertEqual( target_language, "Spanish" )
+        self.assertEqual( native_language, "Romanian" )
 
 if __name__ == "__main__":
     unittest.main()

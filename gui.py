@@ -18,7 +18,9 @@ from PyQt5.QtWidgets import (
     QHeaderView,
     QSizePolicy,
     QLabel,
-    QCheckBox
+    QCheckBox,
+    QComboBox,
+    QDialogButtonBox
 )
 from PyQt5.QtGui import QTextOption, QFont
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
@@ -39,9 +41,17 @@ from user_data import USER_DECKS
 # initialize translator (for translating to Romanian)
 translator = Translator()
 
+AVAILABLE_LANGUAGES = [
+    "Catalan", "Croatian", "Danish", "Dutch", "English", "Finnish", "French",
+    "German", "Greek", "Italian", "Lithuanian", "Macedonian", "Norwegian", "Polish",
+    "Portuguese", "Romanian", "Slovenian", "Spanish", "Swedish", "Ukrainian"
+]
+
 class AudioThread( QThread ):
     """
     TODO:
+
+    MISSING-TEST
     """
     audio_done = pyqtSignal()
 
@@ -80,6 +90,8 @@ class TranslationThread( QThread ):
 class FlashcardViewer( QDialog ):
     """
     TODO:
+
+    MISSING-TEST
     """
     def __init__( self, flashcards ):
         super().__init__()
@@ -531,9 +543,82 @@ class MainWindow( QWidget ):
         self.flashcards.clear()
         self.update_flashcard_counter()
 
+class LanguageSelectionDialog(QDialog):
+    """
+    TODO:
+    """
+
+    def __init__( self, parent=None ):
+        super().__init__( parent )
+        self.setWindowTitle( "Language and Deck Selection" )
+
+        # Layout for the dialog
+        layout = QVBoxLayout( self )
+
+        # TextEdit for entering card deck names
+        layout.addWidget( QLabel( "Enter card deck name(s), comma-separated:" ) )
+        self.deck_names_edit = QTextEdit( self )
+        layout.addWidget( self.deck_names_edit )
+
+        # Dropdown for selecting the target language
+        layout.addWidget( QLabel( "Select target language:" ) )
+        self.target_language_combo = QComboBox( self )
+        self.target_language_combo.addItems( AVAILABLE_LANGUAGES )
+        self.target_language_combo.setCurrentText( "English" )
+        layout.addWidget( self.target_language_combo )
+
+        # Dropdown for selecting the native language
+        layout.addWidget( QLabel( "Select native language:" ) )
+        self.native_language_combo = QComboBox( self )
+        self.update_native_language_options()
+        layout.addWidget( self.native_language_combo )
+
+        # Update native language options when target language changes
+        self.target_language_combo.currentTextChanged.connect( self.update_native_language_options )
+
+        # OK and Cancel buttons
+        self.button_box = QDialogButtonBox( QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self )
+        self.button_box.accepted.connect( self.accept )
+        self.button_box.rejected.connect( self.reject )
+        layout.addWidget( self.button_box )
+
+        # Disable OK button initially
+        self.button_box.button( QDialogButtonBox.Ok ).setEnabled( False )
+
+        # Connect text change signal to check if OK button can be enabled
+        self.deck_names_edit.textChanged.connect( self.check_deck_names )
+
+    def update_native_language_options( self ):
+        """
+        update native language options excluding the selected target language.
+        """
+        current_target = self.target_language_combo.currentText()
+        self.native_language_combo.clear()
+        self.native_language_combo.addItems(
+            [ lang for lang in AVAILABLE_LANGUAGES if lang != current_target ] )
+        self.native_language_combo.setCurrentText( "Romanian" )
+
+    def check_deck_names( self ):
+        """
+        enable or disable the OK button based on whether the deck names are entered.
+        """
+        text = self.deck_names_edit.toPlainText().strip()
+        self.button_box.button( QDialogButtonBox.Ok ).setEnabled( bool( text ) )
+
+    def get_selection( self ):
+        """
+        return the selected deck names, target language, and native language.
+        """
+        deck_names = self.deck_names_edit.toPlainText().strip()
+        target_language = self.target_language_combo.currentText()
+        native_language = self.native_language_combo.currentText()
+        return deck_names, target_language, native_language
+
 def select_subtitle_file():
     """
     shows user a dialog box prompting for file selection
+
+    MISSING-TEST
     """
     options = QFileDialog.Options()
     options |= QFileDialog.ReadOnly
@@ -551,6 +636,17 @@ if __name__ == "__main__":
     app = QApplication( sys.argv )
 
     app.setStyleSheet( "QWidget { font-size: 17px; }" )
+
+    # Show the dialog before selecting the subtitle file
+    dialog = LanguageSelectionDialog()
+    if dialog.exec_() == QDialog.Accepted:
+        deck_names, target_language, native_language = dialog.get_selection()
+        # Proceed with the selected values
+        print(f"Deck Names: {deck_names}")
+        print(f"Target Language: {target_language}")
+        print(f"Native Language: {native_language}")
+    else:
+        sys.exit()
 
     sub_fpath = select_subtitle_file()
     if not sub_fpath:
