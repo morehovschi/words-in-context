@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QDialogButtonBox
 )
-from PyQt5.QtGui import QTextOption, QFont
+from PyQt5.QtGui import QTextOption, QFont, QFontMetrics
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from googletrans import Translator
 from gtts import gTTS
@@ -86,6 +86,283 @@ class TranslationThread( QThread ):
                                                 src="en",
                                                 dest="ro" ).text
         self.translation_done.emit( translated_text )
+
+def select_subtitle_file():
+    """
+    shows user a dialog box prompting for file selection
+
+    MISSING-TEST
+    """
+    options = QFileDialog.Options()
+    options |= QFileDialog.ReadOnly
+    file_dialog = QFileDialog()
+    file_dialog.setOptions( options )
+    file_dialog.setWindowTitle( "Select Subtitle File" )
+    file_dialog.setDirectory( "data/" )  # Default directory to open
+    file_dialog.setNameFilter( "Subtitle Files (*.srt)" )
+
+    if file_dialog.exec_() == QFileDialog.Accepted:
+        return file_dialog.selectedFiles()[ 0 ]
+
+    return None
+
+class SingleLineTextEdit( QTextEdit ):
+    """
+    TODO:
+    """
+    def __init__( self ):
+        super( SingleLineTextEdit, self ).__init__()
+        # Calculate the height dynamically based on the font size
+        self.adjust_height_to_font()
+
+        # Set the word wrap to NoWrap to prevent multiline
+        self.setWordWrapMode( QTextOption.NoWrap )
+
+    def adjust_height_to_font( self ):
+        # Get the font metrics for the current font
+        font_metrics = QFontMetrics( self.font() )
+        # Calculate the required height for a single line of text
+        text_height = font_metrics.height()
+        # Set the fixed height of the QTextEdit based on this
+        self.setFixedHeight( text_height+15 )  # Adding padding if needed
+
+    def keyPressEvent( self, event ):
+        # Reject the characters '\n' (Enter key) and ','
+        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
+            event.ignore()  # Ignore the Enter key
+        elif event.text() == ',':
+            event.ignore()  # Ignore comma
+        else:
+            super( SingleLineTextEdit, self ).keyPressEvent( event )
+
+class SessionCreationDialog( QDialog ):
+    """
+    TODO:
+    """
+
+    def __init__( self, parent=None ):
+        super().__init__( parent )
+        self.setWindowTitle( "Language and Deck Selection" )
+
+        # Layout for the dialog
+        layout = QVBoxLayout( self )
+
+        layout.addWidget( QLabel( "Enter session name:" ) )
+        self.session_name_edit = SingleLineTextEdit()
+        layout.addWidget( self.session_name_edit )
+
+        # TextEdit for entering card deck names
+        layout.addWidget( QLabel( "Enter card deck name(s), comma-separated:" ) )
+        self.deck_names_edit = QTextEdit( self )
+        layout.addWidget( self.deck_names_edit )
+
+        # Dropdown for selecting the target language
+        layout.addWidget( QLabel( "Select target language:" ) )
+        self.target_language_combo = QComboBox( self )
+        self.target_language_combo.addItems( AVAILABLE_LANGUAGES )
+        self.target_language_combo.setCurrentText( "English" )
+        layout.addWidget( self.target_language_combo )
+
+        # Dropdown for selecting the native language
+        layout.addWidget( QLabel( "Select native language:" ) )
+        self.native_language_combo = QComboBox( self )
+        self.update_native_language_options()
+        layout.addWidget( self.native_language_combo )
+
+        # Update native language options when target language changes
+        self.target_language_combo.currentTextChanged.connect(
+            self.update_native_language_options )
+
+        # OK and Cancel buttons
+        self.button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self )
+        self.button_box.accepted.connect( self.accept )
+        self.button_box.rejected.connect( self.reject )
+        layout.addWidget( self.button_box )
+
+        # Disable OK button initially
+        self.button_box.button( QDialogButtonBox.Ok ).setEnabled( False )
+
+        # Connect text change signal to check if OK button can be enabled
+        self.session_name_edit.textChanged.connect( self.check_deck_names )
+        self.deck_names_edit.textChanged.connect( self.check_deck_names )
+
+    def update_native_language_options( self ):
+        """
+        update native language options excluding the selected target language.
+        """
+        current_target = self.target_language_combo.currentText()
+        self.native_language_combo.clear()
+        self.native_language_combo.addItems(
+            [ lang for lang in AVAILABLE_LANGUAGES if lang != current_target ] )
+        self.native_language_combo.setCurrentText( "Romanian" )
+
+    def check_deck_names( self ):
+        """
+        enable or disable the OK button based on whether session name and deck names
+        are entered.
+        """
+        session_name = self.session_name_edit.toPlainText().strip()
+        deck_names = self.deck_names_edit.toPlainText().strip()
+        self.button_box.button( QDialogButtonBox.Ok ).setEnabled(
+            bool( session_name and deck_names ) )
+
+    def get_selection( self ):
+        """
+        return the selected deck names, target language, and native language.
+        """
+        session_name = self.session_name_edit.toPlainText().strip()
+        # split the deck names by \n or comma
+        deck_names = self.deck_names_edit.toPlainText().strip()
+        deck_names = deck_names.replace( "\n", "," ).split( "," )
+        formatted_deck_names = []
+        for name in deck_names:
+            if len( name ) == 0:
+                continue
+            formatted_deck_names.append( name.strip() )
+
+        target_language = self.target_language_combo.currentText()
+        native_language = self.native_language_combo.currentText()
+        return session_name, formatted_deck_names, target_language, native_language
+
+class SessionSelectionDialog( QDialog ):
+    """
+    TODO:
+
+    MISSING-TEST
+    """
+    def __init__( self ):
+        super().__init__()
+        self.setWindowTitle( "Session Selection" )
+        self.user_sessions = []
+
+        layout = QHBoxLayout( self )
+
+        left_section = QVBoxLayout()
+        self.session_list = QListWidget()
+        left_buttons = QHBoxLayout()
+        self.new_session_button = QPushButton( "New session" )
+        self.delete_session_button = QPushButton( "Delete session" )
+        self.new_session_button.setFocusPolicy( Qt.NoFocus )
+        self.delete_session_button.setFocusPolicy( Qt.NoFocus )
+        self.delete_session_button.setEnabled( False )
+
+        left_buttons.addWidget( self.new_session_button )
+        left_buttons.addWidget( self.delete_session_button )
+        left_section.addWidget( self.session_list )
+        left_section.addLayout( left_buttons )
+
+        right_section = QVBoxLayout()
+        self.deck_name_list = QListWidget()
+        # make the target deck names read-only in this widget
+        self.deck_name_list.setEditTriggers(
+            QAbstractItemView.NoEditTriggers )
+        # make deck names not selectable
+        self.deck_name_list.setSelectionMode(
+            QAbstractItemView.NoSelection )
+        self.target_language_name = QLabel()
+        self.native_language_name = QLabel()
+        self.proceed_button = QDialogButtonBox( QDialogButtonBox.Ok, self )
+        self.proceed_button.button( QDialogButtonBox.Ok ).setText(
+            "Proceed to session" )
+        self.proceed_button.button( QDialogButtonBox.Ok ).setEnabled( False )
+        right_section.addWidget( self.deck_name_list )
+        right_section.addWidget( self.target_language_name )
+        right_section.addWidget( self.native_language_name )
+        right_section.addWidget( self.proceed_button, alignment=Qt.AlignHCenter )
+
+        layout.addLayout( left_section )
+        layout.addLayout( right_section )
+
+        # connect signals and slots
+        self.new_session_button.clicked.connect( self.create_new_session )
+        self.delete_session_button.clicked.connect(
+            self.on_delete_session_clicked )
+        self.session_list.itemSelectionChanged.connect(
+            self.display_current_session )
+        self.proceed_button.accepted.connect( self.accept )
+
+    def display_current_session( self ):
+        if not self.session_list.selectedItems():
+            self.deck_name_list.clear()
+            self.target_language_name.setText( "" )
+            self.native_language_name.setText( "" )
+            self.delete_session_button.setEnabled( False )
+            self.proceed_button.button( QDialogButtonBox.Ok ).setEnabled( False )
+            return
+
+        self.deck_name_list.clear()
+        selected_session =\
+            self.user_sessions[ self.session_list.currentRow() ]
+        for deck_name in selected_session[ 1 ]:
+            self.deck_name_list.addItem( deck_name )
+
+        self.target_language_name.setText( selected_session[ 2 ] )
+        self.native_language_name.setText( selected_session[ 3 ] )
+
+        self.delete_session_button.setEnabled( True )
+        self.proceed_button.button( QDialogButtonBox.Ok ).setEnabled( True )
+
+    def update_session_list( self ):
+        selected_session_idx = None
+        if self.session_list.selectedItems():
+            selected_session_idx = self.session_list.currentRow()
+
+        self.session_list.clear()
+
+        for session_name, _, _, _ in self.user_sessions:
+            self.session_list.addItem( session_name )
+
+        if selected_session_idx is not None:
+            self.session_list.setCurrentRow( selected_session_idx )
+
+        self.display_current_session()
+
+    def create_new_session( self ):
+        creation_dialog = SessionCreationDialog()
+        if creation_dialog.exec_() == QDialog.Accepted:
+            session_name, deck_names, target_language, native_language =\
+                creation_dialog.get_selection()
+        else:
+            return
+
+        self.user_sessions.append(
+            ( session_name,
+              deck_names,
+              f"Target: {target_language}",
+              f"Native: {native_language}" ) )
+        self.update_session_list()
+
+    def delete_session( self ):
+        if not self.session_list.selectedItems():
+            return
+
+        self.user_sessions.pop( self.session_list.currentRow() )
+        self.session_list.clearSelection()
+        self.update_session_list()
+
+    def on_delete_session_clicked( self ):
+        # confirmation dialog before actually deleting
+        reply = QMessageBox.question(
+            self,
+            "Delete Session",
+            "Are you sure you want to delete "
+            f'"{self.session_list.currentItem().text()}"?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            self.delete_session()
+
+    def get_selection( self ):
+         selected_idx = self.session_list.currentRow()
+         session_name = self.user_sessions[ selected_idx ][ 0 ]
+         deck_list = self.user_sessions[ selected_idx ][ 1 ]
+         languages = self.user_sessions[ selected_idx ][ 2 ] + ", " +\
+                     self.user_sessions[ selected_idx ][ 3 ]
+
+         return session_name, deck_list, languages
 
 class FlashcardViewer( QDialog ):
     """
@@ -543,254 +820,20 @@ class MainWindow( QWidget ):
         self.flashcards.clear()
         self.update_flashcard_counter()
 
-class LanguageSelectionDialog( QDialog ):
-    """
-    TODO:
-    """
-
-    def __init__( self, parent=None ):
-        super().__init__( parent )
-        self.setWindowTitle( "Language and Deck Selection" )
-
-        # Layout for the dialog
-        layout = QVBoxLayout( self )
-
-        # TextEdit for entering card deck names
-        layout.addWidget( QLabel( "Enter card deck name(s), comma-separated:" ) )
-        self.deck_names_edit = QTextEdit( self )
-        layout.addWidget( self.deck_names_edit )
-
-        # Dropdown for selecting the target language
-        layout.addWidget( QLabel( "Select target language:" ) )
-        self.target_language_combo = QComboBox( self )
-        self.target_language_combo.addItems( AVAILABLE_LANGUAGES )
-        self.target_language_combo.setCurrentText( "English" )
-        layout.addWidget( self.target_language_combo )
-
-        # Dropdown for selecting the native language
-        layout.addWidget( QLabel( "Select native language:" ) )
-        self.native_language_combo = QComboBox( self )
-        self.update_native_language_options()
-        layout.addWidget( self.native_language_combo )
-
-        # Update native language options when target language changes
-        self.target_language_combo.currentTextChanged.connect(
-            self.update_native_language_options )
-
-        # OK and Cancel buttons
-        self.button_box = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self )
-        self.button_box.accepted.connect( self.accept )
-        self.button_box.rejected.connect( self.reject )
-        layout.addWidget( self.button_box )
-
-        # Disable OK button initially
-        self.button_box.button( QDialogButtonBox.Ok ).setEnabled( False )
-
-        # Connect text change signal to check if OK button can be enabled
-        self.deck_names_edit.textChanged.connect( self.check_deck_names )
-
-    def update_native_language_options( self ):
-        """
-        update native language options excluding the selected target language.
-        """
-        current_target = self.target_language_combo.currentText()
-        self.native_language_combo.clear()
-        self.native_language_combo.addItems(
-            [ lang for lang in AVAILABLE_LANGUAGES if lang != current_target ] )
-        self.native_language_combo.setCurrentText( "Romanian" )
-
-    def check_deck_names( self ):
-        """
-        enable or disable the OK button based on whether the deck names are entered.
-        """
-        text = self.deck_names_edit.toPlainText().strip()
-        self.button_box.button( QDialogButtonBox.Ok ).setEnabled( bool( text ) )
-
-    def get_selection( self ):
-        """
-        return the selected deck names, target language, and native language.
-        """
-        deck_names = self.deck_names_edit.toPlainText().strip()
-        target_language = self.target_language_combo.currentText()
-        native_language = self.native_language_combo.currentText()
-        return deck_names, target_language, native_language
-
-class SessionSelectionDialog( QDialog ):
-    """
-    TODO:
-
-    MISSING-TEST
-    """
-    def __init__( self ):
-        super().__init__()
-        self.setWindowTitle( "Session Selection" )
-        self.user_sessions = []
-
-        layout = QHBoxLayout( self )
-
-        left_section = QVBoxLayout()
-        self.session_list = QListWidget()
-        left_buttons = QHBoxLayout()
-        self.new_session_button = QPushButton( "New session" )
-        self.delete_session_button = QPushButton( "Delete session" )
-        self.new_session_button.setFocusPolicy( Qt.NoFocus )
-        self.delete_session_button.setFocusPolicy( Qt.NoFocus )
-        self.delete_session_button.setEnabled( False )
-
-        left_buttons.addWidget( self.new_session_button )
-        left_buttons.addWidget( self.delete_session_button )
-        left_section.addWidget( self.session_list )
-        left_section.addLayout( left_buttons )
-
-        right_section = QVBoxLayout()
-        self.deck_name_list = QListWidget()
-        # make the target deck names read-only in this widget
-        self.deck_name_list.setEditTriggers(
-            QAbstractItemView.NoEditTriggers )
-        # make deck names not selectable
-        self.deck_name_list.setSelectionMode(
-            QAbstractItemView.NoSelection )
-        self.target_language_name = QLabel()
-        self.native_language_name = QLabel()
-        self.proceed_button = QDialogButtonBox( QDialogButtonBox.Ok, self )
-        self.proceed_button.button( QDialogButtonBox.Ok ).setText(
-            "Proceed to session" )
-        self.proceed_button.button( QDialogButtonBox.Ok ).setEnabled( False )
-        right_section.addWidget( self.deck_name_list )
-        right_section.addWidget( self.target_language_name )
-        right_section.addWidget( self.native_language_name )
-        right_section.addWidget( self.proceed_button, alignment=Qt.AlignHCenter )
-
-        layout.addLayout( left_section )
-        layout.addLayout( right_section )
-
-        # connect signals and slots
-        self.new_session_button.clicked.connect( self.create_new_session )
-        self.delete_session_button.clicked.connect(
-            self.on_delete_session_clicked )
-        self.session_list.itemSelectionChanged.connect(
-            self.display_current_session )
-        self.proceed_button.accepted.connect( self.accept )
-
-    def display_current_session( self ):
-        if not self.session_list.selectedItems():
-            self.deck_name_list.clear()
-            self.target_language_name.setText( "" )
-            self.native_language_name.setText( "" )
-            self.delete_session_button.setEnabled( False )
-            self.proceed_button.button( QDialogButtonBox.Ok ).setEnabled( False )
-            return
-
-        self.deck_name_list.clear()
-        selected_session =\
-            self.user_sessions[ self.session_list.currentRow() ]
-        for deck_name in selected_session[ 1 ]:
-            self.deck_name_list.addItem( deck_name )
-
-        self.target_language_name.setText( selected_session[ 2 ] )
-        self.native_language_name.setText( selected_session[ 3 ] )
-
-        self.delete_session_button.setEnabled( True )
-        self.proceed_button.button( QDialogButtonBox.Ok ).setEnabled( True )
-
-    def update_session_list( self ):
-        selected_session_idx = None
-        if self.session_list.selectedItems():
-            selected_session_idx = self.session_list.currentRow()
-
-        self.session_list.clear()
-
-        for session_name, _, _, _ in self.user_sessions:
-            self.session_list.addItem( session_name )
-
-        if selected_session_idx is not None:
-            self.session_list.setCurrentRow( selected_session_idx )
-
-        self.display_current_session()
-
-    def create_new_session( self ):
-        deck_list = []
-        for i in range( len( self.user_sessions ) + 1 ):
-            deck_list.append( f"Deck {i+1}" )
-        self.user_sessions.append(
-            ( f"Session {chr(65+len(self.user_sessions))}",
-              deck_list,
-              "Target: English", "Native: Romanian" ) )
-        self.update_session_list()
-
-    def delete_session( self ):
-        if not self.session_list.selectedItems():
-            return
-
-        self.user_sessions.pop( self.session_list.currentRow() )
-        self.session_list.clearSelection()
-        self.update_session_list()
-
-    def on_delete_session_clicked( self ):
-        # confirmation dialog before actually deleting
-        reply = QMessageBox.question(
-            self,
-            "Delete Session",
-            "Are you sure you want to delete "
-            f'"{self.session_list.currentItem().text()}"?',
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-
-        if reply == QMessageBox.Yes:
-            self.delete_session()
-
-    def get_selection( self ):
-         selected_idx = self.session_list.currentRow()
-         session_name = self.user_sessions[ selected_idx ][ 0 ]
-         deck_list = self.user_sessions[ selected_idx ][ 1 ]
-         languages = self.user_sessions[ selected_idx ][ 2 ] + ", " +\
-                     self.user_sessions[ selected_idx ][ 3 ]
-
-         return session_name, deck_list, languages
-
-def select_subtitle_file():
-    """
-    shows user a dialog box prompting for file selection
-
-    MISSING-TEST
-    """
-    options = QFileDialog.Options()
-    options |= QFileDialog.ReadOnly
-    file_dialog = QFileDialog()
-    file_dialog.setOptions( options )
-    file_dialog.setWindowTitle( "Select Subtitle File" )
-    file_dialog.setDirectory( "data/" )  # Default directory to open
-    file_dialog.setNameFilter( "Subtitle Files (*.srt)" )
-
-    if file_dialog.exec_() == QFileDialog.Accepted:
-        return file_dialog.selectedFiles()[ 0 ]
-    return None
-
 if __name__ == "__main__":
     app = QApplication( sys.argv )
 
     app.setStyleSheet( "QWidget { font-size: 17px; }" )
 
-    session_dialog = SessionSelectionDialog()
-    if session_dialog.exec_() == QDialog.Accepted:
-        session_name, deck_names, languages = session_dialog.get_selection()
+    selection_dialog = SessionSelectionDialog()
+    if selection_dialog.exec_() == QDialog.Accepted:
+        session_name, deck_names, languages = selection_dialog.get_selection()
         print( f"Session name: {session_name}" )
         print( f"Deck names: {deck_names}" )
         print( f"Languages: {languages}" )
     else:
-        sys.exit()
-
-    # Show the dialog before selecting the subtitle file
-    dialog = LanguageSelectionDialog()
-    if dialog.exec_() == QDialog.Accepted:
-        deck_names, target_language, native_language = dialog.get_selection()
-        # Proceed with the selected values
-        print( f"Deck Names: {deck_names}" )
-        print( f"Target Language: {target_language}" )
-        print( f"Native Language: {native_language}" )
-    else:
+        QMessageBox.warning( None, "No Session Selected",
+                             "No session selected. Exiting." )
         sys.exit()
 
     sub_fpath = select_subtitle_file()

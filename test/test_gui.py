@@ -8,26 +8,24 @@ from PyQt5.QtCore import Qt
 
 # sys path manipulation necessary for importing class defined in parent dir
 sys.path.insert( 0, os.getcwd() )
-from gui import MainWindow, LanguageSelectionDialog
+from gui import MainWindow, SessionCreationDialog
 
 class TestTranslation( unittest.TestCase ):
     """
     test translation and basic main window functionality
     """
 
-    @classmethod
-    def setUpClass( cls ):
-        cls.app = QApplication( sys.argv )
-
     def setUp( self ):
         """
         initialize the main window with a test subtitle file path
         """
+        self.app = QApplication( sys.argv )
         self.main_window = MainWindow( sub_fpath="data/detour-1945.srt" )
         self.main_window.show()
 
     def tearDown( self ):
         self.main_window.close()
+        self.app = None
 
         # verify that temporary audio file has been cleaned up
         self.assertFalse( os.path.isfile( "tmp-audio.mp3" ) )
@@ -87,19 +85,17 @@ class TestNameFiltering( unittest.TestCase ):
     test the name filtering toggle in the GUI
     """
 
-    @classmethod
-    def setUpClass( cls ):
-        cls.app = QApplication( sys.argv )
-
     def setUp( self ):
         """
         initialize the main window with a test subtitle file path
         """
+        self.app = QApplication( sys.argv )
         self.main_window = MainWindow( sub_fpath="data/its-a-wonderful-life-1946.srt" )
         self.main_window.show()
 
     def tearDown( self ):
         self.main_window.close()
+        self.app = None
 
     def test_name_filtering( self ):
         """
@@ -170,7 +166,7 @@ class TestNameFiltering( unittest.TestCase ):
                               unfiltered_top20[ i ] )
 
 
-class TestLanguageSelectionDialog( unittest.TestCase ):
+class TestSessionCreationDialog( unittest.TestCase ):
     """
     very basic unit test for the language selection dialog
 
@@ -180,14 +176,17 @@ class TestLanguageSelectionDialog( unittest.TestCase ):
     def setUp( self ):
         # create the application and dialog for testing
         self.app = QApplication( sys.argv )
-        self.dialog = LanguageSelectionDialog()
+        self.dialog = SessionCreationDialog()
 
     def tearDown( self ):
         # clean up the dialog and application after tests
         self.dialog = None
         self.app = None
 
-    def test_language_selection( self ):
+    def test_session_creation_dialog( self ):
+        # simulates inputting session name
+        QTest.keyClicks( self.dialog.session_name_edit, "Session A" )
+
         # simulate entering deck names
         QTest.keyClicks( self.dialog.deck_names_edit, "Deck 1, Deck 2" )
 
@@ -207,10 +206,12 @@ class TestLanguageSelectionDialog( unittest.TestCase ):
         self.dialog.button_box.button( QDialogButtonBox.Ok ).click()
 
         # get the selection from the dialog
-        deck_names, target_language, native_language = self.dialog.get_selection()
+        session_name, deck_names, target_language, native_language =\
+            self.dialog.get_selection()
 
         # assert that the data matches the input
-        self.assertEqual( deck_names, "Deck 1, Deck 2" )
+        self.assertEqual( session_name, "Session A" )
+        self.assertEqual( deck_names, [ "Deck 1", "Deck 2" ] )
         self.assertEqual( target_language, "Spanish" )
         self.assertEqual( native_language, "Romanian" )
 
