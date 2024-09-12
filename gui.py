@@ -38,14 +38,10 @@ from export import Flashcard, export_to_anki
 # deployment-specific data: the target user Decks
 from user_data import USER_DECKS
 
+from user_sessions import AVAILABLE_LANGUAGES
+
 # initialize translator (for translating to Romanian)
 translator = Translator()
-
-AVAILABLE_LANGUAGES = [
-    "Catalan", "Croatian", "Danish", "Dutch", "English", "Finnish", "French",
-    "German", "Greek", "Italian", "Lithuanian", "Macedonian", "Norwegian", "Polish",
-    "Portuguese", "Romanian", "Slovenian", "Spanish", "Swedish", "Ukrainian"
-]
 
 class AudioThread( QThread ):
     """
