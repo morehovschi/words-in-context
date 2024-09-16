@@ -38,7 +38,13 @@ from export import Flashcard, export_to_anki
 # deployment-specific data: the target user Decks
 from user_data import USER_DECKS
 
-from user_sessions import AVAILABLE_LANGUAGES
+from user_sessions import (
+    AVAILABLE_LANGUAGES,
+    load_user_sessions,
+    add_user_session,
+    delete_user_session,
+    save_user_sessions
+)
 
 # initialize translator (for translating to Romanian)
 translator = Translator()
@@ -224,13 +230,19 @@ class SessionCreationDialog( QDialog ):
 class SessionSelectionDialog( QDialog ):
     """
     TODO:
-
-    MISSING-TEST
     """
-    def __init__( self ):
+    def __init__( self, user_sessions_file="test_user_sessions.json" ):
+        """
+        instantiate necessary variables and define the aspect of the dialog;
+
+        default user sessions file points to a test file in order to prevent
+        unintentional modification/deletion of deployment sessions
+        """
         super().__init__()
         self.setWindowTitle( "Session Selection" )
-        self.user_sessions = []
+
+        self.user_session_file = user_sessions_file
+        self.session_dict = load_user_sessions( path=self.user_session_file )
 
         layout = QHBoxLayout( self )
 
@@ -278,6 +290,8 @@ class SessionSelectionDialog( QDialog ):
             self.display_current_session )
         self.proceed_button.accepted.connect( self.accept )
 
+        self.update_session_list()
+
     def display_current_session( self ):
         if not self.session_list.selectedItems():
             self.deck_name_list.clear()
@@ -288,13 +302,15 @@ class SessionSelectionDialog( QDialog ):
             return
 
         self.deck_name_list.clear()
-        selected_session =\
-            self.user_sessions[ self.session_list.currentRow() ]
-        for deck_name in selected_session[ 1 ]:
+        selected_session = self.session_list.currentItem().text()
+        decks = self.session_dict[ "sessions" ][ selected_session ][ "decks" ]
+        for deck_name in decks:
             self.deck_name_list.addItem( deck_name )
 
-        self.target_language_name.setText( selected_session[ 2 ] )
-        self.native_language_name.setText( selected_session[ 3 ] )
+        self.target_language_name.setText(
+            self.session_dict[ "sessions" ][ selected_session ][ "target_lang" ] )
+        self.native_language_name.setText(
+            self.session_dict[ "sessions" ][ selected_session ][ "native_lang" ] )
 
         self.delete_session_button.setEnabled( True )
         self.proceed_button.button( QDialogButtonBox.Ok ).setEnabled( True )
@@ -306,40 +322,46 @@ class SessionSelectionDialog( QDialog ):
 
         self.session_list.clear()
 
-        for session_name, _, _, _ in self.user_sessions:
+        for session_name in self.session_dict[ "sessions" ]:
             self.session_list.addItem( session_name )
 
-        if selected_session_idx is not None:
+        if ( ( selected_session_idx is not None ) and
+             ( selected_session_idx < self.session_list.count() ) ):
             self.session_list.setCurrentRow( selected_session_idx )
 
         self.display_current_session()
 
     def create_new_session( self ):
         creation_dialog = SessionCreationDialog()
+
         if creation_dialog.exec_() == QDialog.Accepted:
-            session_name, deck_names, target_language, native_language =\
+            session_name, deck_names, target_lang, native_lang =\
                 creation_dialog.get_selection()
         else:
             return
 
-        self.user_sessions.append(
-            ( session_name,
-              deck_names,
-              f"Target: {target_language}",
-              f"Native: {native_language}" ) )
+        add_user_session( self.session_dict, session_name, deck_names, target_lang,
+                          native_lang )
         self.update_session_list()
+
+        # save update to disk
+        save_user_sessions( self.session_dict, path=self.user_session_file )
 
     def delete_session( self ):
         if not self.session_list.selectedItems():
             return
 
-        self.user_sessions.pop( self.session_list.currentRow() )
+        session_name = self.session_list.currentItem().text()
         self.session_list.clearSelection()
+        delete_user_session( self.session_dict, session_name )
         self.update_session_list()
+
+        # save update to disk
+        save_user_sessions( self.session_dict, path=self.user_session_file )
 
     def on_delete_session_clicked( self ):
         # confirmation dialog before actually deleting
-        reply = QMessageBox.question(
+        delete_session_dialog = QMessageBox.question(
             self,
             "Delete Session",
             "Are you sure you want to delete "
@@ -348,17 +370,19 @@ class SessionSelectionDialog( QDialog ):
             QMessageBox.No
         )
 
-        if reply == QMessageBox.Yes:
+        if delete_session_dialog == QMessageBox.Yes:
             self.delete_session()
 
     def get_selection( self ):
-         selected_idx = self.session_list.currentRow()
-         session_name = self.user_sessions[ selected_idx ][ 0 ]
-         deck_list = self.user_sessions[ selected_idx ][ 1 ]
-         languages = self.user_sessions[ selected_idx ][ 2 ] + ", " +\
-                     self.user_sessions[ selected_idx ][ 3 ]
 
-         return session_name, deck_list, languages
+        session_name = self.session_list.currentItem().text()
+        deck_list = self.session_dict[ "sessions" ][ session_name ][ "decks" ]
+        target_lang =\
+            self.session_dict[ "sessions" ][ session_name ][ "target_lang" ]
+        native_lang =\
+            self.session_dict[ "sessions" ][ session_name ][ "native_lang" ]
+
+        return session_name, deck_list, target_lang, native_lang
 
 class FlashcardViewer( QDialog ):
     """
@@ -821,12 +845,14 @@ if __name__ == "__main__":
 
     app.setStyleSheet( "QWidget { font-size: 17px; }" )
 
-    selection_dialog = SessionSelectionDialog()
+    selection_dialog = SessionSelectionDialog(
+        user_sessions_file="user_sessions.json" )
     if selection_dialog.exec_() == QDialog.Accepted:
-        session_name, deck_names, languages = selection_dialog.get_selection()
+        session_name, deck_names, target_lang, native_lang =\
+            selection_dialog.get_selection()
         print( f"Session name: {session_name}" )
         print( f"Deck names: {deck_names}" )
-        print( f"Languages: {languages}" )
+        print( f"Languages: {target_lang, native_lang}" )
     else:
         QMessageBox.warning( None, "No Session Selected",
                              "No session selected. Exiting." )

@@ -4,3 +4,4 @@
 *.swp
 *.apkg
 local-garbage/*
+*user_sessions.json
