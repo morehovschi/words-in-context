@@ -25,14 +25,17 @@ class Flashcard:
     """
     TODO:
     """
-    def __init__(self, front, back):
+    def __init__( self, front, back ):
         self.front = front
         self.back = back
 
-def export_to_anki( card_list, decks ):
+def export_to_anki( card_list, deck_name_to_id ):
     """
     TODO:
     """
+    decks = []
+    for deck_name, deck_id in deck_name_to_id.items():
+        decks.append( genanki.Deck( deck_id, deck_name ) )
 
     for j, card in enumerate( card_list ):
         for i, deck in enumerate( decks ):

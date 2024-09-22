@@ -233,7 +233,7 @@ class SessionSelectionDialog( QDialog ):
     """
     def __init__( self, user_sessions_file="test_user_sessions.json" ):
         """
-        instantiate necessary variables and define the aspect of the dialog;
+        instantiate necessary variables and define the visual aspect of the dialog;
 
         default user sessions file points to a test file in order to prevent
         unintentional modification/deletion of deployment sessions
@@ -374,15 +374,19 @@ class SessionSelectionDialog( QDialog ):
             self.delete_session()
 
     def get_selection( self ):
-
         session_name = self.session_list.currentItem().text()
-        deck_list = self.session_dict[ "sessions" ][ session_name ][ "decks" ]
         target_lang =\
             self.session_dict[ "sessions" ][ session_name ][ "target_lang" ]
         native_lang =\
             self.session_dict[ "sessions" ][ session_name ][ "native_lang" ]
 
-        return session_name, deck_list, target_lang, native_lang
+        # get deck name->id mapping for the current session
+        deck_name_to_id = {}
+        for deck_name in self.session_dict[ "sessions" ][ session_name ][ "decks" ]:
+            deck_name_to_id[ deck_name ] =\
+                self.session_dict[ "deck_id" ][ deck_name ]
+
+        return session_name, deck_name_to_id, target_lang, native_lang
 
 class FlashcardViewer( QDialog ):
     """
@@ -479,9 +483,12 @@ class FlashcardViewer( QDialog ):
 class MainWindow( QWidget ):
     translation_complete = pyqtSignal()
 
-    def __init__( self, sub_fpath ):
+    def __init__( self, sub_fpath, target_lang, native_lang, deck_name_to_id ):
         super().__init__()
         self.sub_fpath = sub_fpath
+        self.target_lang = target_lang
+        self.native_lang = native_lang
+        self.deck_name_to_id = deck_name_to_id
 
         self.flashcards = []
         self.doc_word_stats = None
@@ -820,7 +827,7 @@ class MainWindow( QWidget ):
 
         self.update_flashcard_counter()
 
-    def view_cards(self):
+    def view_cards( self ):
         """
         TODO:
         """
@@ -828,15 +835,15 @@ class MainWindow( QWidget ):
         self.flashcard_viewer.exec_()
         self.update_flashcard_counter()
 
-    def update_flashcard_counter(self):
+    def update_flashcard_counter( self ):
         """
         TODO:
         """
         self.flashcard_counter.setText( str( len( self.flashcards ) ) )
         self.export_button.setEnabled( len( self.flashcards ) > 0 )
 
-    def export_flashcards(self):
-        export_to_anki( self.flashcards, USER_DECKS )
+    def export_flashcards( self ):
+        export_to_anki( self.flashcards, self.deck_name_to_id )
         self.flashcards.clear()
         self.update_flashcard_counter()
 
@@ -848,10 +855,10 @@ if __name__ == "__main__":
     selection_dialog = SessionSelectionDialog(
         user_sessions_file="user_sessions.json" )
     if selection_dialog.exec_() == QDialog.Accepted:
-        session_name, deck_names, target_lang, native_lang =\
+        session_name, deck_name_to_id, target_lang, native_lang =\
             selection_dialog.get_selection()
         print( f"Session name: {session_name}" )
-        print( f"Deck names: {deck_names}" )
+        print( f"Deck names and IDs: {deck_name_to_id}" )
         print( f"Languages: {target_lang, native_lang}" )
     else:
         QMessageBox.warning( None, "No Session Selected",
@@ -864,7 +871,11 @@ if __name__ == "__main__":
                              "No subtitle file selected. Exiting." )
         sys.exit()
 
-    mainWindow = MainWindow( sub_fpath=sub_fpath )
+    mainWindow = MainWindow( sub_fpath=sub_fpath,
+                             target_lang=target_lang,
+                             native_lang=native_lang,
+                             deck_name_to_id=deck_name_to_id )
+
     app.aboutToQuit.connect( MainWindow.clean_up_temp_audio )
     mainWindow.show()
     sys.exit( app.exec_() )
