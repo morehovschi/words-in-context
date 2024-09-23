@@ -15,6 +15,7 @@ import json
 import time
 import math
 import re
+import langdetect
 
 from progress.bar import Bar
 from joblib import Parallel, delayed
@@ -32,6 +33,53 @@ if "en_core_web_sm" not in spacy.cli.info()[ "pipelines" ]:
 
 # initialize translator (for translating into Romanian)
 translator = Translator()
+
+# ISO 639, Set 1 abbreviations
+LANG_CODE = {
+    "Catalan": "ca",
+    "Croatian": "hr",
+    "Danish": "da",
+    "Dutch": "nl",
+    "English": "en",
+    "Finnish": "fi",
+    "French": "fr",
+    "German": "de",
+    "Greek": "el",
+    "Italian": "it",
+    "Lithuanian": "lt",
+    "Macedonian": "mk",
+    "Norwegian": "no",
+    "Polish": "pl",
+    "Portuguese": "pt",
+    "Romanian": "ro",
+    "Slovenian": "sl",
+    "Spanish": "es",
+    "Swedish": "sv",
+    "Ukrainian": "uk"
+}
+
+SPACY_MODEL_NAME = {
+    "ca": "ca_core_news_sm",
+    "hr": "hr_core_news_sm",
+    "da": "da_core_news_sm",
+    "nl": "nl_core_news_sm",
+    "en": "en_core_web_sm",
+    "fi": "fi_core_news_sm",
+    "fr": "fr_core_news_sm",
+    "de": "de_core_news_sm",
+    "el": "el_core_news_sm",
+    "it": "it_core_news_sm",
+    "lt": "lt_core_news_sm",
+    "mk": "mk_core_news_sm",
+    "no": "nb_core_news_sm",
+    "pl": "pl_core_news_sm",
+    "pt": "pt_core_news_sm",
+    "ro": "ro_core_news_sm",
+    "sl": "sl_core_news_sm",
+    "es": "es_core_news_sm",
+    "sv": "sv_core_news_sm",
+    "uk": "uk_core_news_sm",
+}
 
 def has_alpha( string ):
     for char in string:
@@ -225,6 +273,24 @@ def analyze_file_subtitle_ids( fpath, cache_path="" ):
         if cache_path:
             with open( cache_path + fname + '.json' , 'w' ) as json_file:
                 json.dump( word_stats, json_file )
+
+def detect_corpus_languages( dirpath ):
+    """
+    looks at every .srt file under dirpath and detects the text language; returns
+    a set of codes of the detected languages
+    """
+    file_lang = {}
+    fnames = os.listdir( dirpath )
+    if ".DS_Store" in fnames:
+        fnames.remove( ".DS_Store" )
+
+    for fname in fnames:
+        text_lines = srt_subtitles( dirpath + "/" + fname )
+        # join into a string before passing to language detector
+        lang = langdetect.detect( "\n".join( text_lines ) )
+        file_lang[ fname ] = lang
+
+    return file_lang
 
 def process_dir( dirpath ):
     """
