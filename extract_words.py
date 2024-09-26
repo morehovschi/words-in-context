@@ -137,7 +137,9 @@ def srt_subtitles( fpath ):
                 # remove any HTML tags
                 subtitle = re.sub( TAG_REGEX, "", subtitle ).strip()
 
-                subtitles.append( subtitle )
+                # remove any \n chars before saving, as those are used to keep
+                # track of lines after spacing and lemmatization with spaCy
+                subtitles.append( subtitle.replace( "\n", " " ) )
 
                 num += 1
                 timestamp = None
@@ -153,7 +155,7 @@ def srt_subtitles( fpath ):
         # if timestamp not None, there is still the last subtitle in the file that
         # has not yet been added to the list
         if timestamp:
-            subtitles.append( subtitle.strip() )
+            subtitles.append( subtitle.replace( "\n", "" ).strip() )
 
     return subtitles
 
@@ -320,11 +322,156 @@ def process_dir( dirpath ):
         if not fname.endswith( ".json" ):
             continue
 
+        # cached data file of the new process dir function, irrelevant here
+        if fname == "file_stats.json":
+            continue
+
         with open( "cached-data/" + fname ) as json_file:
             corpus[ separate_fpath( fname )[ 1 ] ] = \
                 json.load( json_file )
 
     return corpus
+
+def ensure_model_donwloaded( model_name ):
+    """
+    helper for process_dir_new
+    """
+    if model_name not in spacy.cli.info()[ "pipelines" ]:
+        print( "Downloading model name:", model_name )
+        spacy.cli.download( model_name )
+
+def analyze_file_new( fpath, model ):
+    """
+    TODO:
+    """
+    file_stats = { "wsid": {} }
+    likely_names = {}
+
+    subs = srt_subtitles( fpath )
+
+    # join the srt lines into a single string and pass to spacy model for spacing
+    # and lemmatization
+    doc = model( "\n".join( subs ) )
+
+    # srt line counter for easy lookup later
+    line_counter = 0
+    # total word counter in file
+    word_counter = 0
+    # word position in sentence
+    pos_counter = 0
+    for i in range( len( doc ) ):
+        if doc[ i ].text == "\n":
+            line_counter += 1
+            pos_counter = 0
+            continue
+
+        # if token is sentence start, or the previous character is a punctuation
+        # mark that acts as a sentence start -> reset the word position counter
+        if ( doc[ i ].is_sent_start or
+             (  doc[ i ].i > 0 and doc[ i ].nbor( -1 ).is_punct and
+                    doc[ i ].nbor( -1 ).is_sent_start ) or
+             ( doc[ i ].i > 0 and doc[ i ].nbor( -1 ).text == "-" ) ):
+            pos_counter = 0
+
+        if ( ( doc[ i ].is_punct ) or ( doc[ i ] is None ) or
+             ( doc[ i ].text == ' ' ) or ( not has_alpha( doc[ i ].text ) ) ):
+            continue
+
+        lemma = doc[ i ].lemma_.lower()
+        if lemma not in file_stats[ "wsid" ]:
+            file_stats[ "wsid" ][ lemma ] = [ line_counter ]
+        else:
+            file_stats[ "wsid" ][ lemma ].append( line_counter )
+
+        # if word is upper case, it is possibly a name
+        if is_namecase( doc[ i ].text ):
+            if lemma in likely_names:
+                likely_names[ lemma ].append( pos_counter )
+            else:
+                likely_names[ lemma ] = [ pos_counter ]
+
+        pos_counter += 1
+        word_counter += 1
+
+        # END looping through document tokens
+
+    # if any possible name is also encountered in lowercase, it does not only appear
+    # as a proper noun in this document; mark it as a non-name
+    definitely_not_names = set()
+    for name in likely_names:
+        if len( file_stats[ "wsid" ][ name ] ) > len( likely_names[ name ] ):
+            definitely_not_names.add( name )
+
+    for name in likely_names:
+        # if only one occurrence or if all occurrences are at the beginning of
+        # the subtitle ==> the word is not a name
+        if ( ( len( likely_names[ name ] ) < 2 ) or
+             ( not any( likely_names[ name ] )) ):
+                definitely_not_names.add( name )
+
+    # after this loop, only words that:
+    #   - were only encountered in uppercase AND
+    #   - were encountered more than once AND
+    #   - were encountered in different positions in their respecive lines
+    # are considered names
+    for word in definitely_not_names:
+        del likely_names[ word ]
+
+    file_stats[ "total_words" ] = word_counter
+    file_stats[ "likely_names" ] = likely_names
+    return file_stats
+
+def process_dir_new( dirpath, target_lang=None,
+                     cached_data_path="cached-data/file_stats.json" ):
+    """
+    a new, more efficient way to analyze files in a directory, calling a new set of
+    helper functions
+
+    if target_lang is None, ignore other languages, otherwise analyze all
+    """
+    # get a dictionary of file -> language
+    file_to_lang = detect_corpus_languages( dirpath )
+
+    # just target language if specified, or all detected languages otherwise
+    lang_list = [ target_lang ] if target_lang else list( file_to_lang.values() )
+
+    # make sure spaCy model is downloaded for any languages where one is needed
+    for lang in lang_list:
+        model_name = SPACY_MODEL_NAME[ lang ]
+        if model_name not in spacy.cli.info()[ "pipelines" ]:
+            print( "Downloading model name:", model_name )
+            spacy.cli.download( model_name )
+
+    # try to load cached source file stats; if not available, create new dict
+    file_stats = None
+    if os.path.isfile( cached_data_path ):
+        with open( cached_data_path ) as json_file:
+            file_stats = json.load( json_file )
+    else:
+        file_stats = {}
+
+    # file stats dict is keyed by language; make sure an entry exists for any
+    # language currently being analyzed
+    time_0 = time.time()
+    print( "Processing input data...", flush=True, end="" )
+    for lang in lang_list:
+        if lang not in file_stats:
+            file_stats[ lang ] = {}
+
+        model = spacy.load( SPACY_MODEL_NAME[ lang ] )
+
+        for file in os.listdir( dirpath ):
+            if ( file not in file_stats[ lang ] and
+                 file_to_lang.get( file, None ) == lang ):
+                file_stats[ lang ][ file ] =\
+                    analyze_file_new( dirpath + "/" + file, model )
+
+    print( f"\rProcessed. Time taken: {time.time() - time_0:.2f} seconds.", flush=True )
+
+    with open( cached_data_path, "w" ) as json_file:
+        json.dump( file_stats, json_file )
+
+    return file_stats
 
 def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None ):
     """
