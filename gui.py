@@ -35,9 +35,6 @@ from extract_words import (
 )
 from export import Flashcard, export_to_anki
 
-# deployment-specific data: the target user Decks
-from user_data import USER_DECKS
-
 from user_sessions import (
     AVAILABLE_LANGUAGES,
     load_user_sessions,

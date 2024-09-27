@@ -4,7 +4,6 @@ TODO:
 
 import genanki
 from genanki.util import guid_for
-from user_data import USER_DECKS
 
 MODEL = genanki.Model(
   241193077,
@@ -85,8 +84,3 @@ def export_to_anki( card_list, deck_name_to_id ):
     for i, deck in enumerate( decks ):
         genanki.Package( deck ).write_to_file( deck.name + ".apkg" )
 
-if __name__ == "__main__":
-    # test code
-    card_list = [ Flashcard( "i", "j" ), Flashcard( "k", "l" ) ]
-
-    export_to_anki( card_list, USER_DECKS )
