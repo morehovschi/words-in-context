@@ -102,10 +102,16 @@ def separate_fpath( fpath ):
 
     return dir_path, fname, extension
 
-def srt_subtitles( fpath ):
+def srt_subtitles( fpath, separator="" ):
     """
     helper that reads an srt file and returns a list of srt senteces where each
     item's index matches the srt line number
+
+    fpath( str ): path to the subtitle file
+    separator( str ): a special string that can be used after a document is passed
+                      through spaCy's nlp lemmatizer so that the original separation
+                      of the lines can be recovered. Best if it's a madeup word like
+                      "Endlineword".
     """
 
     subtitles = []
@@ -126,7 +132,7 @@ def srt_subtitles( fpath ):
                     num = int( line )
                     # add $num empty items at the beginning so that subtitle indices
                     # in the list match subtitle numbers in the file
-                    subtitles += [ "" ] * num
+                    subtitles += [ separator ] * num
 
                 line = f.readline()
                 continue
@@ -137,9 +143,7 @@ def srt_subtitles( fpath ):
                 # remove any HTML tags
                 subtitle = re.sub( TAG_REGEX, "", subtitle ).strip()
 
-                # remove any \n chars before saving, as those are used to keep
-                # track of lines after spacing and lemmatization with spaCy
-                subtitles.append( subtitle.replace( "\n", " " ) )
+                subtitles.append( subtitle.strip().replace( "\n", " " ) + separator )
 
                 num += 1
                 timestamp = None
@@ -155,7 +159,7 @@ def srt_subtitles( fpath ):
         # if timestamp not None, there is still the last subtitle in the file that
         # has not yet been added to the list
         if timestamp:
-            subtitles.append( subtitle.replace( "\n", "" ).strip() )
+            subtitles.append( subtitle.strip().replace( "\n", " " ) + separator)
 
     return subtitles
 
@@ -347,7 +351,7 @@ def analyze_file_new( fpath, model ):
     file_stats = { "wsid": {} }
     likely_names = {}
 
-    subs = srt_subtitles( fpath )
+    subs = srt_subtitles( fpath, separator=" Endlineword" )
 
     # join the srt lines into a single string and pass to spacy model for spacing
     # and lemmatization
@@ -360,7 +364,7 @@ def analyze_file_new( fpath, model ):
     # word position in sentence
     pos_counter = 0
     for i in range( len( doc ) ):
-        if doc[ i ].text == "\n":
+        if doc[ i ].text == "Endlineword":
             line_counter += 1
             pos_counter = 0
             continue
@@ -473,7 +477,8 @@ def process_dir_new( dirpath, target_lang=None,
 
     return file_stats
 
-def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None ):
+def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None,
+                        new_process_dir=False ):
     """
     given a path to a data directory and the name of a file in it, loads data about
     word occurrences in all files (or, if unavailable, computes and saves it), and
@@ -486,10 +491,18 @@ def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None ):
     """
     # dictionary of word count dictionaries for all files in data_path dir
     if corpus is None:
-        corpus = process_dir( data_path )
+        if not new_process_dir:
+            corpus = process_dir( data_path )
+        else:
+            corpus = process_dir_new( data_path )[ "en" ]
 
     word_collection = corpus[ file ][ "wsid" ]
     likely_names = corpus[ file ][ "likely_names" ]
+
+    if not new_process_dir:
+        words_in_doc = corpus[ file ][ "wsid" ][ "__total__" ]
+    else:
+        words_in_doc = corpus[ file ][ "total_words" ]
 
     doc_word_stats = []
 
@@ -500,7 +513,7 @@ def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None ):
         word_stats = {}
 
         word_stats[ 'count' ] = len( word_collection[ word ] )
-        word_stats[ 'words_in_doc' ] = word_collection[ '__total__']
+        word_stats[ 'words_in_doc' ] = words_in_doc
         word_stats[ 'frequency' ] = word_stats[ 'count' ] /\
                                         word_stats[ 'words_in_doc' ]
         word_stats[ 'word_occs_in_docs' ] = 0

@@ -14,20 +14,12 @@ from extract_words import process_dir, process_dir_new, get_doc_word_stats
 
 class TestProcessDir( unittest.TestCase ):
     def test_process_dir( self ):
-        old_result = process_dir( "data/" )
-        new_result = process_dir_new( "data/", target_lang="en" )
-
-        # copy this value under an additional key within wsid to match the format
-        # of the old result
-        new_result[ "en" ][ "detour-1945.srt" ][ "wsid" ][ "__total__" ] =\
-            new_result[ "en" ][ "detour-1945.srt" ][ "total_words" ]
-
         # call the same function that calculates TF-IDF on both results
-        old_tf_idf = get_doc_word_stats( None, "detour-1945", name_filtering=True,
-                                         corpus=old_result )
-        new_tf_idf = get_doc_word_stats( None, "detour-1945.srt",
+        old_tf_idf = get_doc_word_stats( "data/", "detour-1945",
+                                         name_filtering=True )
+        new_tf_idf = get_doc_word_stats( "data/", "detour-1945.srt",
                                          name_filtering=True,
-                                         corpus=new_result[ "en" ] )
+                                         new_process_dir=True )
 
         # check that the top 10 words by TF-IDF are the same for both methods;
 
@@ -40,9 +32,12 @@ class TestProcessDir( unittest.TestCase ):
 
         # verify that the two words preprocessing functions determined the same
         # words as likely names
-        self.assertCountEqual(
-            old_result[ "detour-1945" ][ "likely_names" ],
-            new_result[ "en" ][ "detour-1945.srt" ][ "likely_names" ] )
+        old_names = process_dir( "data/" )[ "detour-1945" ][ "likely_names" ]
+        new_names = process_dir_new( "data/", target_lang="en" )\
+            [ "en" ][ "detour-1945.srt" ][ "likely_names" ]
+
+        self.assertCountEqual( old_names, new_names )
+
 
 if __name__ == "__main__":
     unittest.main()

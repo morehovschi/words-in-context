@@ -31,7 +31,8 @@ from extract_words import (
     srt_subtitles,
     get_doc_word_stats,
     separate_fpath,
-    process_dir
+    process_dir,
+    process_dir_new
 )
 from export import Flashcard, export_to_anki
 
@@ -516,7 +517,7 @@ class MainWindow( QWidget ):
         self.middle_section = QVBoxLayout()
         self.info_label = QLabel()
         self.example_list = QListWidget()
-        self.blank_row = QLabel("")
+        self.blank_row = QLabel( "" )
         self.example_list.setWordWrap( QTextOption.WordWrap )
         self.middle_section.addWidget( self.info_label )
         self.middle_section.addWidget( self.example_list )
@@ -612,13 +613,14 @@ class MainWindow( QWidget ):
         """
 
         self.srt_subtitles = srt_subtitles( self.sub_fpath )
-        data_path, file, _ = separate_fpath( self.sub_fpath )
+        data_path, file, ext = separate_fpath( self.sub_fpath )
 
         if self.corpus is None:
-            self.corpus = process_dir( data_path )
-        self.doc_word_stats = get_doc_word_stats( data_path, file,
+            self.corpus = process_dir_new( data_path )[ "en" ]
+        self.doc_word_stats = get_doc_word_stats( data_path, file+ext,
                                                   self.name_filtering,
-                                                  corpus=self.corpus )
+                                                  corpus=self.corpus,
+                                                  new_process_dir=True )
 
         self.word_list.clear()
         self.top_words = []
