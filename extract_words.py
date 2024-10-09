@@ -25,7 +25,6 @@ TIMESTAMP_REGEX = "[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3} --> [0-9]{2}:[0-9]{2}:[0-
 NON_ALPHABET_REGEX = "[^a-zA-Z']"
 TAG_REGEX = re.compile( r"[<|\/<]*.>" )
 
-# LANGSPEC
 # check that English language model available, and download if necessary
 # (used for lemmatization)
 if "en_core_web_sm" not in spacy.cli.info()[ "pipelines" ]:
@@ -172,7 +171,6 @@ def count_words( fpath ):
            values here are lists of ids of the word within the occurring sentence.
     """
 
-    # LANGSPEC
     # load English language model, for lemmatization;
     #
     # this function is called in parallel, so each of its instances needs to load
@@ -457,7 +455,7 @@ def process_dir_new( dirpath, target_lang=None,
     # file stats dict is keyed by language; make sure an entry exists for any
     # language currently being analyzed
     time_0 = time.time()
-    print( "Processing input data...", flush=True, end="" )
+    print( "Processing srt files...", flush=True, end="" )
     for lang in lang_list:
         if lang not in file_stats:
             file_stats[ lang ] = {}
@@ -593,7 +591,6 @@ def word_occurrence_menu( word, occ_ids, subtitles ):
             print( f"Selected sentence:\n \"{ subtitles[ occ_ids[ idx - 1 ] ] }\"" )
             print( "\nTranslating...", end="", flush=True )
 
-            # LANGSPEC
             translated = translator.translate( subtitles[ occ_ids[ idx - 1 ] ],
                                                src="en", dest="ro" ).text
 

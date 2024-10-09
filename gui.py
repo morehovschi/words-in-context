@@ -32,7 +32,8 @@ from extract_words import (
     get_doc_word_stats,
     separate_fpath,
     process_dir,
-    process_dir_new
+    process_dir_new,
+    LANG_CODE
 )
 from export import Flashcard, export_to_anki
 
@@ -55,18 +56,18 @@ class AudioThread( QThread ):
     """
     audio_done = pyqtSignal()
 
-    def __init__( self, source_text, audio_filename ):
+    def __init__( self, source_text, audio_filename, lang ):
         super().__init__()
         self.source_text = source_text
         self.audio_filename = audio_filename
+        self.lang = lang
 
     def run( self ):
         # clean up any previously created temporary audio
         if os.path.isfile( self.audio_filename ):
             os.unlink( self.audio_filename )
 
-        # LANGSPEC
-        audio = gTTS( text=self.source_text, lang="en", slow=False )
+        audio = gTTS( text=self.source_text, lang=self.lang, slow=False )
         audio.save( self.audio_filename )
         self.audio_done.emit()
 
@@ -76,15 +77,16 @@ class TranslationThread( QThread ):
     """
     translation_done = pyqtSignal( str )
 
-    def __init__( self, text_to_translate ):
+    def __init__( self, text_to_translate, target_lang, native_lang ):
         super().__init__()
         self.text_to_translate = text_to_translate
+        self.target_lang = target_lang
+        self.native_lang = native_lang
 
     def run( self ):
-        # LANGSPEC
         translated_text = translator.translate( self.text_to_translate,
-                                                src="en",
-                                                dest="ro" ).text
+                                                src=self.target_lang,
+                                                dest=self.native_lang ).text
         self.translation_done.emit( translated_text )
 
 def select_subtitle_file():
@@ -305,9 +307,9 @@ class SessionSelectionDialog( QDialog ):
         for deck_name in decks:
             self.deck_name_list.addItem( deck_name )
 
-        self.target_language_name.setText(
+        self.target_language_name.setText( "Target: " +\
             self.session_dict[ "sessions" ][ selected_session ][ "target_lang" ] )
-        self.native_language_name.setText(
+        self.native_language_name.setText( "Native: " +\
             self.session_dict[ "sessions" ][ selected_session ][ "native_lang" ] )
 
         self.delete_session_button.setEnabled( True )
@@ -495,8 +497,11 @@ class MainWindow( QWidget ):
         self.translation_thread = None
         self.audio_thread = None
         self.flashcard_viewer = None
-        self.corpus = None  # whole word corpus for all subtitle files
-        self.name_filtering = True
+        self.corpus = None  # whole word corpus for all srt files in target lang
+        if target_lang != "de":
+            self.name_filtering = True
+        else:
+            self.name_filtering = False
 
         self.initUI()
 
@@ -509,7 +514,12 @@ class MainWindow( QWidget ):
         self.word_list = QListWidget()
         self.nf_button = QCheckBox()
         self.nf_button.setChecked( self.name_filtering )
-        self.nf_button.setText( "Name filtering enabled" )
+        if self.target_lang == "de":
+            self.nf_button.setEnabled( False )
+            self.nf_button.setText( "Name filtering unavailable for German" )
+        else:
+            nf_state = "enabled" if self.name_filtering else "disabled"
+            self.nf_button.setText( "Name filtering " + nf_state )
         self.left_section.addWidget( self.word_list )
         self.left_section.addWidget( self.nf_button )
 
@@ -569,7 +579,6 @@ class MainWindow( QWidget ):
         layout.addLayout( right_layout )
 
         # connect signals and slots
-        self.nf_button.toggled.connect( self.toggle_name_filtering )
         self.word_list.itemSelectionChanged.connect(
             self.update_examples )
         self.example_list.itemSelectionChanged.connect( self.display_example )
@@ -578,6 +587,13 @@ class MainWindow( QWidget ):
         self.save_card_button.clicked.connect( self.save_card )
         self.view_cards_button.clicked.connect( self.view_cards )
         self.export_button.clicked.connect( self.export_flashcards )
+
+        # the option to enable name filtering is unavailable for German
+        # (name filtering is a best effort name detection algorithm focusing on
+        # words starting in a capital letter in the middle of the sentence; this
+        # does not work for German because all nouns are capitalized)
+        if self.target_lang != "de":
+            self.nf_button.toggled.connect( self.toggle_name_filtering )
 
         self.media_player = QMediaPlayer()
 
@@ -594,6 +610,9 @@ class MainWindow( QWidget ):
         gets called when user checks/unchecks "Name filtering"
         """
         self.name_filtering = self.nf_button.isChecked()
+        state = "enabled" if self.name_filtering else "disabled"
+
+        self.nf_button.setText( "Name filtering " + state )
         self.load_top_words()
         if self.word_list.count() > 0:
             self.word_list.setCurrentRow( 0 )  # select first word by default
@@ -616,7 +635,7 @@ class MainWindow( QWidget ):
         data_path, file, ext = separate_fpath( self.sub_fpath )
 
         if self.corpus is None:
-            self.corpus = process_dir_new( data_path )[ "en" ]
+            self.corpus = process_dir_new( data_path )[ self.target_lang ]
         self.doc_word_stats = get_doc_word_stats( data_path, file+ext,
                                                   self.name_filtering,
                                                   corpus=self.corpus,
@@ -708,7 +727,9 @@ class MainWindow( QWidget ):
 
         selected_word, selected_example = self.get_current_word_and_example()
         self.translation_thread = TranslationThread( selected_word + "\n\n" +
-                                                     selected_example )
+                                                     selected_example,
+                                                     self.target_lang,
+                                                     self.native_lang )
 
         self.translation_thread.translation_done.connect( self.on_translation_done )
         self.translation_thread.start()
@@ -747,7 +768,7 @@ class MainWindow( QWidget ):
 
         selected_word, selected_example = self.get_current_word_and_example()
         self.audio_thread = AudioThread( selected_word + ". " + selected_example,
-                                         "tmp-audio.mp3" )
+                                         "tmp-audio.mp3", self.target_lang )
         self.audio_thread.audio_done.connect( self.on_audio_ready )
         self.audio_thread.start()
 
@@ -854,11 +875,8 @@ if __name__ == "__main__":
     selection_dialog = SessionSelectionDialog(
         user_sessions_file="user_sessions.json" )
     if selection_dialog.exec_() == QDialog.Accepted:
-        session_name, deck_name_to_id, target_lang, native_lang =\
+        session_name, deck_name_to_id, target_lang_name, native_lang_name =\
             selection_dialog.get_selection()
-        print( f"Session name: {session_name}" )
-        print( f"Deck names and IDs: {deck_name_to_id}" )
-        print( f"Languages: {target_lang, native_lang}" )
     else:
         QMessageBox.warning( None, "No Session Selected",
                              "No session selected. Exiting." )
@@ -869,6 +887,10 @@ if __name__ == "__main__":
         QMessageBox.warning( None, "No File Selected",
                              "No subtitle file selected. Exiting." )
         sys.exit()
+
+    # convert language names to abbreviated codes
+    target_lang = LANG_CODE[ target_lang_name ]
+    native_lang = LANG_CODE[ native_lang_name ]
 
     mainWindow = MainWindow( sub_fpath=sub_fpath,
                              target_lang=target_lang,
