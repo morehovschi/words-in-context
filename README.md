@@ -1,5 +1,7 @@
 ## *word-recon*: make input comprehensible
 
+![Word Recon](./screenshot.png)
+
 ### tldr
 This is a Python desktop app that serves as a language learning companion. It analyzes the given subtitle files in the `data` folder,
 counts the words in all the files of the selected target language, and outputs a ranked list of the most common words. The user interface
