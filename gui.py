@@ -506,7 +506,7 @@ class MainWindow( QWidget ):
         self.initUI()
 
     def initUI( self ):
-        self.setWindowTitle( "Subtitle Word Picker" )
+        self.setWindowTitle( "Word Recon" )
         self.setGeometry( 50, 50, 1200, 700 )
 
         # left layout
