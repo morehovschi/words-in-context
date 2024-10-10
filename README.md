@@ -4,10 +4,10 @@
 
 ### tldr
 This is a Python desktop app that serves as a language learning companion. It analyzes the given subtitle files in the `data` folder,
-counts the words in all the files of the selected target language, and outputs a ranked list of the most common words. The user interface
-shows the statistics for any chosen word, shows contextual examples (sentences), and can translate and play an audio of the sentence
-to clarify pronunciation. The example and translation box can be saved as a flash card, and then all flash cards can be exported to one
-or more Anki decks.
+counts the words in all the files of the selected target language, and outputs a ranked list of the most common words for a given subtitle
+file. The user interface shows the statistics for any chosen word, shows contextual examples (sentences), and can translate and play an
+audio of the sentence to clarify pronunciation. The example and translation box can be saved as a flash card, and then all flash cards
+can be exported to one or more Anki decks.
 
 Quick demo: https://drive.google.com/file/d/1VhKB__TjuWnBvOfQPLN5KhR2Aka78A4G/view?usp=drive_link
 
@@ -23,7 +23,7 @@ To run:
 
 ### Why?
 According to linguists such as Stephen Krashen, language is acquired through comprehensible input.
-Nice explanation: https://www.youtube.com/watch?v=NiTsduRreug&ab_channel=MarkRounds
+Here is a brief explanation: https://www.youtube.com/watch?v=NiTsduRreug&ab_channel=MarkRounds
 That is, in order to learn a language, start by consuming interesting and comprehensible content (for example movies) in your target
 language. But the difficulty in the beginning is that almost none of the input is comprehensible.
 
@@ -36,8 +36,8 @@ The metric used for classification is the TF-IDF metric, not raw frequency, as f
 as "word frequency divided by number of documents word occurs in" - so it prioritizes words common in our target document, but uncommon
 in others. Thus it shows words most likely to be relevant for memorizing ahead of watching a movie/episode.
 
-In addition, word-recon offers name filtering, which is a best effort algorithm to filter out proper nouns (e.g. "Bob", "Alice",
-"Greenland"), as they do not represent vocabulary in the target language.
+In addition, word-recon offers name filtering, a best effort algorithm to filter out proper nouns (e.g. "Bob", "Alice", "Greenland"),
+as they are not really memorizable vocabulary in the target language.
 
 ### Export as Anki decks
 The example and translation box are editable and can be saved as flash cards, where the front is the example word and sentence in the
