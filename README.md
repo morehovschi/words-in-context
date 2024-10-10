@@ -34,8 +34,8 @@ The metric used for classification is the TF-IDF metric, not raw frequency, as f
 as "word frequency divided by number of documents word occurs in" - so it prioritizes words common in our target document, but uncommon
 in others. Thus it shows words most likely to be relevant for memorizing ahead of watching a movie/episode.
 
-In addition, word-recon offers name filtering, which is a best effort algorithm to filter out proper nouns (e.g. "Bob", "Alice",
-"Greenland"), as they do not represent vocabulary in the target language.
+In addition, word-recon offers name filtering, a best effort algorithm to filter out proper nouns (e.g. "Bob", "Alice", "Greenland"),
+as they are not really memorizable vocabulary in the target language.
 
 ### Export as Anki decks
 The example and translation box are editable and can be saved as flash cards, where the front is the example word and sentence in the
