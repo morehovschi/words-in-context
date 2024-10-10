@@ -2,10 +2,10 @@
 
 ### tldr
 This is a Python desktop app that serves as a language learning companion. It analyzes the given subtitle files in the `data` folder,
-counts the words in all the files of the selected target language, and outputs a ranked list of the most common words. The user interface
-shows the statistics for any chosen word, shows contextual examples (sentences), and can translate and play an audio of the sentence
-to clarify pronunciation. The example and translation box can be saved as a flash card, and then all flash cards can be exported to one
-or more Anki decks.
+counts the words in all the files of the selected target language, and outputs a ranked list of the most common words for a given subtitle
+file. The user interface shows the statistics for any chosen word, shows contextual examples (sentences), and can translate and play an
+audio of the sentence to clarify pronunciation. The example and translation box can be saved as a flash card, and then all flash cards
+can be exported to one or more Anki decks.
 
 Quick demo: https://drive.google.com/file/d/1VhKB__TjuWnBvOfQPLN5KhR2Aka78A4G/view?usp=drive_link
 
