@@ -21,7 +21,7 @@ To run:
 
 ### Why?
 According to linguists such as Stephen Krashen, language is acquired through comprehensible input.
-Nice explanation: https://www.youtube.com/watch?v=NiTsduRreug&ab_channel=MarkRounds
+Here is a brief explanation: https://www.youtube.com/watch?v=NiTsduRreug&ab_channel=MarkRounds
 That is, in order to learn a language, start by consuming interesting and comprehensible content (for example movies) in your target
 language. But the difficulty in the beginning is that almost none of the input is comprehensible.
 
