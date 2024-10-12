@@ -1,6 +1,6 @@
-## *word-recon*: make input comprehensible
+## Make input comprehensible!
 
-![Word Recon](./screenshot.png)
+![Words in Context](./screenshot.png)
 
 ### tldr
 This is a Python desktop app that serves as a language learning companion. It analyzes the given subtitle files in the `data` folder,
