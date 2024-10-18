@@ -14,7 +14,7 @@ import spacy
 import json
 import time
 import math
-import re
+import regex as re
 import langdetect
 
 from progress.bar import Bar
@@ -334,7 +334,7 @@ def process_dir( dirpath ):
 
     return corpus
 
-def ensure_model_donwloaded( model_name ):
+def ensure_model_downloaded( model_name ):
     """
     helper for process_dir_new
     """
@@ -342,7 +342,7 @@ def ensure_model_donwloaded( model_name ):
         print( "Downloading model name:", model_name )
         spacy.cli.download( model_name )
 
-def analyze_file_new( fpath, model ):
+def analyze_file_new( fpath, model, remove_punct=False ):
     """
     TODO:
     """
@@ -361,6 +361,22 @@ def analyze_file_new( fpath, model ):
     word_counter = 0
     # word position in sentence
     pos_counter = 0
+
+    def save_word( word ):
+        # helper that saves the stats for a particular word;
+        # exists because a doc token may have more than one word e.g. "well-lit"
+        if word not in file_stats[ "wsid" ]:
+            file_stats[ "wsid" ][ word ] = [ line_counter ]
+        else:
+            file_stats[ "wsid" ][ word ].append( line_counter )
+
+        # if word is upper case, it is possibly a name
+        if is_namecase( doc[ i ].text ):
+            if word in likely_names:
+                likely_names[ word ].append( pos_counter )
+            else:
+                likely_names[ word ] = [ pos_counter ]
+
     for i in range( len( doc ) ):
         if doc[ i ].text == "Endlineword":
             line_counter += 1
@@ -379,23 +395,45 @@ def analyze_file_new( fpath, model ):
              ( doc[ i ].text == ' ' ) or ( not has_alpha( doc[ i ].text ) ) ):
             continue
 
-        lemma = doc[ i ].lemma_.lower()
-        if lemma not in file_stats[ "wsid" ]:
-            file_stats[ "wsid" ][ lemma ] = [ line_counter ]
+        # handle special case in German with apostrophe that replaces a vowel
+        # e.g. "nächt'gen", "unharmon'sche", "heft'gen"
+        if ( re.match( r"[\p{Latin}]{1,50}'[\p{Latin}]{2,50}", doc[ i ].text )
+             and model.meta[ "lang" ] == "de"  ):
+            # better to save the .text than .lemma_ in this particular case because
+            # the model has a difficult time getting the right lemma for words
+            # contracted in this way
+            save_word( doc[ i ].text.lower() )
+            pos_counter += 1
+            word_counter += 1
+            continue
+
+        # remove punctuation and separate potential hyphenated words by replacing
+        # every non-Latin or non-Cyrillic alphabet with " ", then splitting
+        words = re.sub( r"[^\p{Latin}\p{Cyrillic}]", " ",
+                        doc[ i ].lemma_.lower() ).split()
+
+        if len( words ) == 1:
+            save_word( words[ 0 ] )
+            pos_counter += 1
+            word_counter += 1
         else:
-            file_stats[ "wsid" ][ lemma ].append( line_counter )
+            # lemmatize again with the joined words now separated
+            # e.g. what would otherwise be lemmatize as "Himmels-Liebe" now is
+            # "himmels"->"himmel", "liebe"->"liebe"
+            minidoc = model( " ".join( words ) )
+            for token in minidoc:
+                # sometimes single letter words are inexplicably lemmatized as
+                # punctuation marks e.g. "s" -> "--"
+                if not has_alpha( token.lemma_ ):
+                    continue
 
-        # if word is upper case, it is possibly a name
-        if is_namecase( doc[ i ].text ):
-            if lemma in likely_names:
-                likely_names[ lemma ].append( pos_counter )
-            else:
-                likely_names[ lemma ] = [ pos_counter ]
+                save_word( token.lemma_.lower() )
 
-        pos_counter += 1
-        word_counter += 1
-
-        # END looping through document tokens
+                # increment counters for each token added
+                pos_counter += 1
+                word_counter += 1
+            # END looping through split token words
+    # END looping through document tokens
 
     # if any possible name is also encountered in lowercase, it does not only appear
     # as a proper noun in this document; mark it as a non-name
@@ -440,9 +478,7 @@ def process_dir_new( dirpath, target_lang=None,
     # make sure spaCy model is downloaded for any languages where one is needed
     for lang in lang_list:
         model_name = SPACY_MODEL_NAME[ lang ]
-        if model_name not in spacy.cli.info()[ "pipelines" ]:
-            print( "Downloading model name:", model_name )
-            spacy.cli.download( model_name )
+        ensure_model_downloaded( model_name )
 
     # try to load cached source file stats; if not available, create new dict
     file_stats = None
