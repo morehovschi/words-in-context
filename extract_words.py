@@ -162,122 +162,6 @@ def srt_subtitles( fpath, separator="" ):
 
     return subtitles
 
-def count_words( fpath ):
-    """
-    Opens the subtitle file at $fpath and returns a dictionary of two dictionaries:
-        1. "wsid": for each word in the doc, a list of the ids of the subtitles
-           where it occurs.
-        2. "likely_names": a dictionary of words deemed likely names. The dictionary
-           values here are lists of ids of the word within the occurring sentence.
-    """
-
-    # load English language model, for lemmatization;
-    #
-    # this function is called in parallel, so each of its instances needs to load
-    # a separate instance of the spacy model, to avoid shared memory issues
-    nlp = spacy.load( "en_core_web_sm" )
-
-    word_subtitle_ids = {}
-    likely_names = {}
-
-    subtitles = srt_subtitles( fpath )
-
-    total_words = 0
-
-    for sub_number, subtitle in enumerate( subtitles ):
-        if not subtitle:
-            continue
-
-        # one subtitle can have more than one dialogue line
-        # e.g.: "- Hello. Carrying any fruits or vegetables? - No."
-        for line in subtitle.split( "- " ):
-            if not line:
-                continue
-
-            doc = nlp( line )
-
-            # position in sentence of actual word (ignoring punct or other signs)
-            wordpos = 0
-
-            for token in doc:
-                # it is possible for a line to contain multiple sentences; wordpos
-                # wordpos is reset then in order to help recognize words that are
-                # always capitalized, regardless of sentence position (likely names)
-                if ( ( token.i > 0 ) and
-                     ( token.is_sent_start or
-                       ( token.nbor( -1 ).is_punct and
-                            token.nbor( -1 ).is_sent_start ) ) ):
-                    wordpos = 0
-
-                if ( token.is_punct ) or ( token is None ) or ( token.text == ' ' ) or\
-                   ( token.text == "\n" ):
-                    continue
-
-                # lemmatize, filter out things like attached dashes, change to lowercase
-                lemma = re.sub( NON_ALPHABET_REGEX, "", token.lemma_.lower() )
-
-                if lemma in word_subtitle_ids:
-                    word_subtitle_ids[ lemma ].append( sub_number )
-                elif lemma:  # only add new lemma if not empty string
-                     word_subtitle_ids[ lemma ] = [ sub_number ]
-
-                # if word is upper case, it is possibly a name
-                if is_namecase( token.text ):
-                    if lemma in likely_names:
-                        likely_names[ lemma ].append( wordpos )
-                    else:
-                        likely_names[ lemma ] = [ wordpos ]
-
-                wordpos += 1
-                total_words += 1
-
-	# the total number of words in the file has special key
-    word_subtitle_ids[ "__total__" ] = total_words
-
-    # if any possible name is also encountered in lowercase, it does not only appear
-    # as a proper noun in this document; mark it as a non-name
-    definitely_not_names = set()
-    for name in likely_names:
-        if len( word_subtitle_ids[ name ] ) > len( likely_names[ name ] ):
-            definitely_not_names.add( name )
-
-    for name in likely_names:
-        # if only one occurrence or if all occurrences are at the beginning of
-        # the subtitle ==> the word is not a name
-        if ( ( len( likely_names[ name ] ) < 2 ) or
-             ( not any( likely_names[ name ] )) ):
-                definitely_not_names.add( name )
-
-    # after this loop, only words that:
-    #   - were only encountered in uppercase AND
-    #   - were encountered more than once AND
-    #   - were encountered in different positions in their respecive subtitles
-    # are considered names
-    for word in definitely_not_names:
-        del likely_names[ word ]
-
-    return { "wsid": word_subtitle_ids, "likely_names": likely_names }
-
-def analyze_file_subtitle_ids( fpath, cache_path="" ):
-    """
-    tries to open a serialized dictionary of words and the subtitle numbers where
-    they occur; if unsuccessful, creates that dictionary and saves it
-    """
-
-    fname = separate_fpath( fpath )[ 1 ]
-
-    try:
-        with open( cache_path + fname + '.json' ) as json_file:
-            word_stats = json.load( json_file )
-
-    except FileNotFoundError:
-        word_stats = count_words( fpath )
-
-        # if cache path provided, store the counter dictionary
-        if cache_path:
-            with open( cache_path + fname + '.json' , 'w' ) as json_file:
-                json.dump( word_stats, json_file )
-
 def detect_corpus_languages( dirpath ):
     """
     looks at every .srt file under dirpath and detects the text language; returns
@@ -295,44 +179,6 @@ def detect_corpus_languages( dirpath ):
         file_lang[ fname ] = lang
 
     return file_lang
-
-def process_dir( dirpath ):
-    """
-    Looks at data directory and counts occurrences of all words in all files and
-    stores the counts for each source file as json. If json already available, skips
-    the counting step.
-    """
-    time0 = time.time()
-
-    # count words in each srt file in parallel and output results to json files
-    analyzables = []
-    for fname in os.listdir( dirpath ):
-        if fname.endswith( '.srt' ):
-            analyzables.append( fname )
-    Parallel( n_jobs=-1 )(
-        delayed( analyze_file_subtitle_ids )(
-            dirpath + fname , 'cached-data/' )
-                 for fname in Bar( 'Counting words in files' ).iter( analyzables )
-                         )
-    print( 'elapsed:', time.time() - time0, "\n" )
-
-    # dictionary of word count dictionaries for all files in dirpath dir
-    corpus = {}
-
-    dir_filenames = []
-    for fname in os.listdir( "cached-data/" ):
-        if not fname.endswith( ".json" ):
-            continue
-
-        # cached data file of the new process dir function, irrelevant here
-        if fname == "file_stats.json":
-            continue
-
-        with open( "cached-data/" + fname ) as json_file:
-            corpus[ separate_fpath( fname )[ 1 ] ] = \
-                json.load( json_file )
-
-    return corpus
 
 def ensure_model_downloaded( model_name ):
     """
@@ -518,8 +364,7 @@ def process_dir_new( dirpath, target_lang=None,
 
     return file_stats
 
-def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None,
-                        new_process_dir=False ):
+def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None ):
     """
     given a path to a data directory and the name of a file in it, loads data about
     word occurrences in all files (or, if unavailable, computes and saves it), and
@@ -532,18 +377,12 @@ def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None,
     """
     # dictionary of word count dictionaries for all files in data_path dir
     if corpus is None:
-        if not new_process_dir:
-            corpus = process_dir( data_path )
-        else:
-            corpus = process_dir_new( data_path )[ "en" ]
+        corpus = process_dir_new( data_path )[ "en" ]
 
     word_collection = corpus[ file ][ "wsid" ]
     likely_names = corpus[ file ][ "likely_names" ]
 
-    if not new_process_dir:
-        words_in_doc = corpus[ file ][ "wsid" ][ "__total__" ]
-    else:
-        words_in_doc = corpus[ file ][ "total_words" ]
+    words_in_doc = corpus[ file ][ "total_words" ]
 
     doc_word_stats = []
 
@@ -803,17 +642,16 @@ def main( argv ):
     		   " <name of .srt file in data/> <num words>" )
         exit( 0 )
 
-    data_dir_path = 'data/'
-    fname = separate_fpath( fname_srt )[ 1 ]
+    data_dir_path = "data/"
     name_filtering_enabled = True
 
     subtitles = srt_subtitles( data_dir_path + fname_srt )
 
     # extract stats for the current doc and sort by tf-idf descendingly
-    doc_word_stats = get_doc_word_stats( data_dir_path, fname,
+    doc_word_stats = get_doc_word_stats( data_dir_path, fname_srt,
                                          name_filtering_enabled )
 
-    main_menu( num_words, fname, subtitles, doc_word_stats, data_dir_path,
+    main_menu( num_words, fname_srt, subtitles, doc_word_stats, data_dir_path,
                name_filtering_enabled )
 
 if __name__ == "__main__":

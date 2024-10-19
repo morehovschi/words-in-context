@@ -31,7 +31,6 @@ from extract_words import (
     srt_subtitles,
     get_doc_word_stats,
     separate_fpath,
-    process_dir,
     process_dir_new,
     LANG_CODE
 )
@@ -646,8 +645,7 @@ class MainWindow( QWidget ):
                                  target_lang=self.target_lang )[ self.target_lang ]
         self.doc_word_stats = get_doc_word_stats( data_path, file+ext,
                                                   self.name_filtering,
-                                                  corpus=self.corpus,
-                                                  new_process_dir=True )
+                                                  corpus=self.corpus )
 
         self.word_list.clear()
         self.top_words = []

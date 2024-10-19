@@ -1,10 +1,11 @@
 import unittest
+import spacy
 
 # sys path manipulation necessary for importing function defined in parent dir
-import os, sys 
+import os, sys
 sys.path.insert( 0, os.getcwd() )
 
-from extract_words import count_words
+from extract_words import analyze_file_new
 
 class TestLikelyNames( unittest.TestCase ):
     def test_likely_names( self ):
@@ -42,8 +43,9 @@ class TestLikelyNames( unittest.TestCase ):
             'siamese': [ 6, 0 ],
             'mrs': [ 1, 0 ]
         }
-        
-        likely_names = count_words( "data/detour-1945.srt" )[ "likely_names" ]
+
+        model = spacy.load( "en_core_web_sm" )
+        likely_names = analyze_file_new( "data/detour-1945.srt", model )[ "likely_names" ]
 
         self.assertCountEqual( likely_names, expected_output )
 
