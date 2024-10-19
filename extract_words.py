@@ -491,7 +491,10 @@ def process_dir_new( dirpath, target_lang=None,
     # file stats dict is keyed by language; make sure an entry exists for any
     # language currently being analyzed
     time_0 = time.time()
-    print( "Processing srt files...", flush=True, end="" )
+    total_files = len( os.listdir( dirpath ) )
+    processed_files = 0
+    print( f"Processing srt files...{processed_files}/{total_files}",
+           flush=True, end="" )
     for lang in lang_list:
         if lang not in file_stats:
             file_stats[ lang ] = {}
@@ -503,6 +506,10 @@ def process_dir_new( dirpath, target_lang=None,
                  file_to_lang.get( file, None ) == lang ):
                 file_stats[ lang ][ file ] =\
                     analyze_file_new( dirpath + "/" + file, model )
+
+                processed_files += 1
+                print( f"\rProcessing srt files...{processed_files}/{total_files}",
+                        flush=True, end="" )
 
     print( f"\rProcessed. Time taken: {time.time() - time_0:.2f} seconds.", flush=True )
 

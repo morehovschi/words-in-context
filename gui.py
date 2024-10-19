@@ -45,6 +45,12 @@ from user_sessions import (
     save_user_sessions
 )
 
+import warnings
+
+# suppress a specific warning that is produced when writing rich text to Anki deck
+# file when exporting flash cards
+warnings.filterwarnings( "ignore", category=UserWarning )
+
 # initialize translator (for translating to Romanian)
 translator = Translator()
 
@@ -635,7 +641,9 @@ class MainWindow( QWidget ):
         data_path, file, ext = separate_fpath( self.sub_fpath )
 
         if self.corpus is None:
-            self.corpus = process_dir_new( data_path )[ self.target_lang ]
+            self.corpus =\
+                process_dir_new( data_path,
+                                 target_lang=self.target_lang )[ self.target_lang ]
         self.doc_word_stats = get_doc_word_stats( data_path, file+ext,
                                                   self.name_filtering,
                                                   corpus=self.corpus,
