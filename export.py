@@ -1,5 +1,6 @@
 """
-TODO:
+Utilities for saving the GUI's front and back text as flashcards and writing
+flashcards to .apkg files for all target Anki deck names
 """
 
 import genanki
@@ -22,7 +23,7 @@ MODEL = genanki.Model(
 
 class Flashcard:
     """
-    TODO:
+    custom class holding the text for the front and the back of a flashcard
     """
     def __init__( self, front, back ):
         self.front = front
@@ -30,7 +31,15 @@ class Flashcard:
 
 def export_to_anki( card_list, deck_name_to_id ):
     """
-    TODO:
+    write the Flashcard instances in card_list to all the decks defined in
+    deck_name_to_id;
+
+    the output consists of as many .apkg files as there are names in deck_name_to_id
+    and the file names are "<deck name>.apkg"
+
+    nb: deck_name_to_id is a collection mapping deck names to unique id and it helps
+    ensure that a specific name will always match with the same deck id (to avoid
+    creating duplicate decks with existing names)
     """
     decks = []
     for deck_name, deck_id in deck_name_to_id.items():

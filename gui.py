@@ -55,7 +55,7 @@ translator = Translator()
 
 class AudioThread( QThread ):
     """
-    TODO:
+    create an audio file reading out the source text in the target language
 
     MISSING-TEST
     """
@@ -115,7 +115,9 @@ def select_subtitle_file():
 
 class SingleLineTextEdit( QTextEdit ):
     """
-    TODO:
+    custom text edit that is only one row in height
+
+    used by SessionCreationDialog to get session name from user
     """
     def __init__( self ):
         super( SingleLineTextEdit, self ).__init__()
@@ -144,7 +146,11 @@ class SingleLineTextEdit( QTextEdit ):
 
 class SessionCreationDialog( QDialog ):
     """
-    TODO:
+    instantiated by SessionSelectionDialog whenever "New Session" is clicked
+
+    when it is done it returns to the parent dialog:
+        session_name, formatted_deck_names, target_language, native_language
+    via the get_selection method
     """
 
     def __init__( self, parent=None ):
@@ -234,7 +240,10 @@ class SessionCreationDialog( QDialog ):
 
 class SessionSelectionDialog( QDialog ):
     """
-    TODO:
+    mandatory dialog at app launch for selecting the user session
+
+    a user session defines the target and native languages, as well as the names
+    of the target Anki decks
     """
     def __init__( self, user_sessions_file="test_user_sessions.json" ):
         """
@@ -395,7 +404,9 @@ class SessionSelectionDialog( QDialog ):
 
 class FlashcardViewer( QDialog ):
     """
-    TODO:
+    child dialog of MainWindow displaying the currently saved flashcards
+
+    allows deleting flashcards
 
     MISSING-TEST
     """
@@ -767,7 +778,8 @@ class MainWindow( QWidget ):
 
     def listen_to_example( self ):
         """
-        TODO:
+        instantiate an audio thread that creates an audio file from the example
+        word and sentence
         """
         self.listen_button.setText( "Creating audio..." )
         self.listen_button.setEnabled( False )
@@ -780,7 +792,7 @@ class MainWindow( QWidget ):
 
     def on_audio_ready( self ):
         """
-        TODO:
+        play generated audio - called when audio thread is done creating it
         """
         # clear any audio files that the QMediaPlayer may have cached
         # (necessary on Windows)
@@ -836,14 +848,18 @@ class MainWindow( QWidget ):
     @staticmethod
     def clean_up_temp_audio():
         """
-        TODO:
+        a temporary audio file may have been created if the "Listen" button has
+        been clicked; clean it up
+
+        called upon MainWindow closing
         """
         if os.path.isfile( "tmp-audio.mp3" ):
             os.unlink( "tmp-audio.mp3" )
 
     def save_card( self ):
         """
-        TODO:
+        save the front and the back text (with any user modifications) as an
+        instance of custom class Flashcard
         """
         front_text = self.front_text_edit.toHtml()
         back_text = self.back_text_edit.toHtml()
@@ -855,7 +871,8 @@ class MainWindow( QWidget ):
 
     def view_cards( self ):
         """
-        TODO:
+        open a FlashcardViewer dialog to view and potentially delete any currently
+        saved flashcards
         """
         self.flashcard_viewer = FlashcardViewer( self.flashcards )
         self.flashcard_viewer.exec_()
@@ -863,7 +880,12 @@ class MainWindow( QWidget ):
 
     def update_flashcard_counter( self ):
         """
-        TODO:
+        update the flashcard counter
+
+        limitation: is only called upon clicking "Save card" or closing the
+        FlashcardViewer i.e. if you have the FlashcardViewer still open and are
+        deleting cards, the number will only update once you close the
+        FlashcardViewer
         """
         self.flashcard_counter.setText( str( len( self.flashcards ) ) )
         self.export_button.setEnabled( len( self.flashcards ) > 0 )

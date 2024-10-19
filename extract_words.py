@@ -190,10 +190,15 @@ def ensure_model_downloaded( model_name ):
 
 def analyze_file( fpath, model ):
     """
-    TODO:
+    analyze the file at fpath using the provided spaCy model and return a dictionary
+    with the following keys:
+        "wsid" -> dictionary mapping each word to the indices of the sentences where
+                  where it appears in the file
+        "likely_names" -> dictionary with words that may be names; key: the index of
+                          the word within the sentence
+        "total_words" -> number of total word occurences in this file
     """
-    file_stats = { "wsid": {} }
-    likely_names = {}
+    file_stats = { "wsid": {}, "likely_names": {} }
 
     subs = srt_subtitles( fpath, separator=" Endlineword" )
 
@@ -218,10 +223,10 @@ def analyze_file( fpath, model ):
 
         # if word is upper case, it is possibly a name
         if is_namecase( doc[ i ].text ):
-            if word in likely_names:
-                likely_names[ word ].append( pos_counter )
+            if word in file_stats[ "likely_names" ]:
+                file_stats[ "likely_names" ][ word ].append( pos_counter )
             else:
-                likely_names[ word ] = [ pos_counter ]
+                file_stats[ "likely_names" ][ word ] = [ pos_counter ]
 
     for i in range( len( doc ) ):
         if doc[ i ].text == "Endlineword":
@@ -284,15 +289,16 @@ def analyze_file( fpath, model ):
     # if any possible name is also encountered in lowercase, it does not only appear
     # as a proper noun in this document; mark it as a non-name
     definitely_not_names = set()
-    for name in likely_names:
-        if len( file_stats[ "wsid" ][ name ] ) > len( likely_names[ name ] ):
+    for name in file_stats[ "likely_names" ]:
+        if len( file_stats[ "wsid" ][ name ] ) > \
+           len( file_stats[ "likely_names" ][ name ] ):
             definitely_not_names.add( name )
 
-    for name in likely_names:
+    for name in file_stats[ "likely_names" ]:
         # if only one occurrence or if all occurrences are at the beginning of
         # the subtitle ==> the word is not a name
-        if ( ( len( likely_names[ name ] ) < 2 ) or
-             ( not any( likely_names[ name ] )) ):
+        if ( ( len( file_stats[ "likely_names" ][ name ] ) < 2 ) or
+             ( not any( file_stats[ "likely_names" ][ name ] )) ):
                 definitely_not_names.add( name )
 
     # after this loop, only words that:
@@ -301,10 +307,9 @@ def analyze_file( fpath, model ):
     #   - were encountered in different positions in their respecive lines
     # are considered names
     for word in definitely_not_names:
-        del likely_names[ word ]
+        del file_stats[ "likely_names" ][ word ]
 
     file_stats[ "total_words" ] = word_counter
-    file_stats[ "likely_names" ] = likely_names
     return file_stats
 
 def process_dir( dirpath, target_lang=None,
