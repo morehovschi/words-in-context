@@ -5,7 +5,7 @@ import spacy
 import os, sys
 sys.path.insert( 0, os.getcwd() )
 
-from extract_words import analyze_file_new
+from extract_words import analyze_file
 
 class TestLikelyNames( unittest.TestCase ):
     def test_likely_names( self ):
@@ -45,7 +45,8 @@ class TestLikelyNames( unittest.TestCase ):
         }
 
         model = spacy.load( "en_core_web_sm" )
-        likely_names = analyze_file_new( "data/detour-1945.srt", model )[ "likely_names" ]
+        likely_names = analyze_file( "data/detour-1945.srt",
+                                     model )[ "likely_names" ]
 
         self.assertCountEqual( likely_names, expected_output )
 

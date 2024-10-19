@@ -182,13 +182,13 @@ def detect_corpus_languages( dirpath ):
 
 def ensure_model_downloaded( model_name ):
     """
-    helper for process_dir_new
+    helper for process_dir
     """
     if model_name not in spacy.cli.info()[ "pipelines" ]:
         print( "Downloading model name:", model_name )
         spacy.cli.download( model_name )
 
-def analyze_file_new( fpath, model, remove_punct=False ):
+def analyze_file( fpath, model ):
     """
     TODO:
     """
@@ -307,8 +307,8 @@ def analyze_file_new( fpath, model, remove_punct=False ):
     file_stats[ "likely_names" ] = likely_names
     return file_stats
 
-def process_dir_new( dirpath, target_lang=None,
-                     cached_data_path="cached-data/file_stats.json" ):
+def process_dir( dirpath, target_lang=None,
+                 cached_data_path="cached-data/file_stats.json" ):
     """
     a new, more efficient way to analyze files in a directory, calling a new set of
     helper functions
@@ -351,7 +351,7 @@ def process_dir_new( dirpath, target_lang=None,
             if ( file not in file_stats[ lang ] and
                  file_to_lang.get( file, None ) == lang ):
                 file_stats[ lang ][ file ] =\
-                    analyze_file_new( dirpath + "/" + file, model )
+                    analyze_file( dirpath + "/" + file, model )
 
                 processed_files += 1
                 print( f"\rProcessing srt files...{processed_files}/{total_files}",
@@ -377,7 +377,7 @@ def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None ):
     """
     # dictionary of word count dictionaries for all files in data_path dir
     if corpus is None:
-        corpus = process_dir_new( data_path )[ "en" ]
+        corpus = process_dir( data_path )[ "en" ]
 
     word_collection = corpus[ file ][ "wsid" ]
     likely_names = corpus[ file ][ "likely_names" ]

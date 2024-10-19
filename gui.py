@@ -31,7 +31,7 @@ from extract_words import (
     srt_subtitles,
     get_doc_word_stats,
     separate_fpath,
-    process_dir_new,
+    process_dir,
     LANG_CODE
 )
 from export import Flashcard, export_to_anki
@@ -641,8 +641,8 @@ class MainWindow( QWidget ):
 
         if self.corpus is None:
             self.corpus =\
-                process_dir_new( data_path,
-                                 target_lang=self.target_lang )[ self.target_lang ]
+                process_dir( data_path,
+                             target_lang=self.target_lang )[ self.target_lang ]
         self.doc_word_stats = get_doc_word_stats( data_path, file+ext,
                                                   self.name_filtering,
                                                   corpus=self.corpus )

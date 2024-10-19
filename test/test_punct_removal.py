@@ -5,7 +5,7 @@ import os, sys
 sys.path.insert( 0, os.getcwd() )
 
 from extract_words import (
-    analyze_file_new,
+    analyze_file,
     detect_corpus_languages,
     SPACY_MODEL_NAME,
     srt_subtitles
@@ -26,7 +26,7 @@ class TestPunctRemoval( unittest.TestCase ):
         model_name = SPACY_MODEL_NAME[ lang ]
         model = spacy.load( model_name )
 
-        analysis = analyze_file_new( "data/" + fname, model )
+        analysis = analyze_file( "data/" + fname, model )
 
         # Check 1: any word containing apostrophe as vowel replacement are processed
         # as a single word
