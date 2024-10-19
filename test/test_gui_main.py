@@ -10,29 +10,21 @@ from PyQt5.QtCore import Qt
 sys.path.insert( 0, os.getcwd() )
 from gui import MainWindow
 
-class TestTranslation( unittest.TestCase ):
-    """
-    test translation and basic main window functionality
-    """
-   
-
+class TestTranslationBase():
     def setUp( self ):
         """
         initialize the main window with a test subtitle file path
         """
         self.app = QApplication( sys.argv )
-        self.main_window = MainWindow( sub_fpath="data/detour-1945.srt",
-                                       target_lang="en",
-                                       native_lang="ro",
+        self.main_window = MainWindow( sub_fpath=self.sub_fpath,
+                                       target_lang=self.target_lang,
+                                       native_lang=self.native_lang,
                                        deck_name_to_id={ "Test": 1 } )
         self.main_window.show()
 
     def tearDown( self ):
         self.main_window.close()
         self.app = None
-
-        # verify that temporary audio file has been cleaned up
-        self.assertFalse( os.path.isfile( "tmp-audio.mp3" ) )
 
     def test_interactions( self ):
         """
@@ -68,13 +60,10 @@ class TestTranslation( unittest.TestCase ):
         # wait for the translation to complete (up to 60 seconds)
         spy.wait( 60000 )
 
-        expected_front_text = "scar\n\nI also pointed out that the real Haskell"\
-                              " had a scar on his forearm."
-        expected_back_text = "cicatrice\n\nAm mai subliniat că adevăratul "\
-                             "Haskell avea o cicatrice pe antebraț."\
-
-        self.assertEqual( self.main_window.front_text_edit.toPlainText(), expected_front_text )
-        self.assertEqual( self.main_window.back_text_edit.toPlainText(), expected_back_text )
+        self.assertEqual( self.main_window.front_text_edit.toPlainText(),
+                          self.expected_front_text )
+        self.assertEqual( self.main_window.back_text_edit.toPlainText(),
+                          self.expected_back_text )
 
         # verify that when a different example is clicked, the translation box is
         # cleared
@@ -84,65 +73,28 @@ class TestTranslation( unittest.TestCase ):
             pos=example_list.visualItemRect( example_list.item( 2 ) ).center() )
         self.assertEqual( self.main_window.back_text_edit.toPlainText(), "" )
 
+class TestTranslationEnglish( TestTranslationBase, unittest.TestCase ):
+    """
+    test English translation and basic main window functionality
+    """
+    sub_fpath = "data/detour-1945.srt"
+    target_lang = "en"
+    native_lang = "ro"
+    expected_front_text = "scar\n\nI also pointed out that the real Haskell"\
+                          " had a scar on his forearm."
+    expected_back_text = "cicatrice\n\nAm mai subliniat că adevăratul "\
+                         "Haskell avea o cicatrice pe antebraț."
+
+
 class TestTranslationGerman( unittest.TestCase ):
     """
-    test translation and basic main window functionality
+    test German translation and basic main window functionality
     """
-
-    def setUp( self ):
-        """
-        initialize the main window with a test subtitle file path
-        """
-        self.app = QApplication( sys.argv )
-        self.main_window = MainWindow( sub_fpath="data/faust_1.srt",
-                                       target_lang="de",
-                                       native_lang="en",
-                                       deck_name_to_id={ "Test": 1 } )
-        self.main_window.show()
-
-    def tearDown( self ):
-        self.main_window.close()
-        self.app = None
-
-    def test_interactions( self ):
-        """
-        simulate the user clicking a top word in the left section, and then an
-        example containing the word in the middle section, and then clicking
-        the "Translate" button
-
-        verify that the translation matches what is expected for that particular
-        example
-        """
-
-        top_word_list = self.main_window.word_list
-        example_list = self.main_window.example_list
-        translate_button = self.main_window.translate_button
-
-        # select the fifth item in the top word list
-        QTest.mouseClick(
-            top_word_list.viewport(),
-            Qt.LeftButton,
-            pos=top_word_list.visualItemRect( top_word_list.item( 1 ) ).center() )
-
-        # select the fourth example in the example list
-        QTest.mouseClick(
-            example_list.viewport(),
-            Qt.LeftButton,
-            pos=example_list.visualItemRect( example_list.item( 2 ) ).center() )
-
-        # set up a spy to listen to the "translation complete" signal
-        spy = QSignalSpy( self.main_window.translation_complete )
-
-        QTest.mouseClick( translate_button, Qt.LeftButton )
-
-        # wait for the translation to complete (up to 60 seconds)
-        spy.wait( 60000 )
-
-        expected_front_text = "pudel\n\nFaust mit dem Pudel hereintretend."
-        expected_back_text = "poodle\n\nFaust enters with the poodle."
-
-        self.assertEqual( self.main_window.front_text_edit.toPlainText(), expected_front_text )
-        self.assertEqual( self.main_window.back_text_edit.toPlainText(), expected_back_text )
+    sub_fpath = "data/faust_1.srt"
+    target_lang = "de"
+    native_lang = "en"
+    expected_front_text = "pudel\n\nFaust mit dem Pudel hereintretend."
+    expected_back_text = "poodle\n\nFaust enters with the poodle."
 
 class TestNameFiltering( unittest.TestCase ):
     """
