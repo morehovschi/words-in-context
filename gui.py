@@ -80,19 +80,24 @@ class TranslationThread( QThread ):
     """
     thread that executes translation when "Translate" is clicked
     """
-    translation_done = pyqtSignal( str )
+    translation_done = pyqtSignal( tuple )
 
-    def __init__( self, text_to_translate, target_lang, native_lang ):
+    def __init__( self, word_to_translate, sentence_to_translate, target_lang,
+                  native_lang ):
         super().__init__()
-        self.text_to_translate = text_to_translate
+        self.word_to_translate = word_to_translate
+        self.sentence_to_translate = sentence_to_translate
         self.target_lang = target_lang
         self.native_lang = native_lang
 
     def run( self ):
-        translated_text = translator.translate( self.text_to_translate,
-                                                src=self.target_lang,
-                                                dest=self.native_lang ).text
-        self.translation_done.emit( translated_text )
+        trans_word = translator.translate( self.word_to_translate,
+                                           src=self.target_lang,
+                                           dest=self.native_lang ).text
+        trans_sentence = translator.translate( self.sentence_to_translate,
+                                               src=self.target_lang,
+                                               dest=self.native_lang ).text
+        self.translation_done.emit( ( trans_word, trans_sentence ) )
 
 def select_subtitle_file():
     """
@@ -498,6 +503,7 @@ class FlashcardViewer( QDialog ):
 
 class MainWindow( QWidget ):
     translation_complete = pyqtSignal()
+    back_text_cleared = pyqtSignal()
 
     def __init__( self, sub_fpath, target_lang, native_lang, deck_name_to_id ):
         super().__init__()
@@ -730,6 +736,8 @@ class MainWindow( QWidget ):
 
         # clear previous translations when displaying a new example
         self.back_text_edit.clear()
+        # this signal is used by tests
+        self.back_text_cleared.emit()
 
     def translate_example( self ):
         """
@@ -743,7 +751,7 @@ class MainWindow( QWidget ):
         self.translate_button.setEnabled( False )
 
         selected_word, selected_example = self.get_current_word_and_example()
-        self.translation_thread = TranslationThread( selected_word + "\n\n" +
+        self.translation_thread = TranslationThread( selected_word,
                                                      selected_example,
                                                      self.target_lang,
                                                      self.native_lang )
@@ -751,7 +759,7 @@ class MainWindow( QWidget ):
         self.translation_thread.translation_done.connect( self.on_translation_done )
         self.translation_thread.start()
 
-    def on_translation_done( self, translated_text ):
+    def on_translation_done( self, translated_items ):
         """
         gets called whenever the translation thread has finished its job
 
@@ -760,7 +768,7 @@ class MainWindow( QWidget ):
 
         # sometimes the translater capitalizes the translated word for no reason;
         # below is a dirty hack around that
-        translated_word, translated_example = translated_text.split( "\n\n" )
+        translated_word, translated_example = translated_items
         translated_word = translated_word.lower()
 
         # on Windows, the font weight is sometimes bold after the user previously
