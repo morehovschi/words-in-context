@@ -28,13 +28,13 @@ Here is a brief explanation: https://www.youtube.com/watch?v=NiTsduRreug&ab_chan
 That is, in order to learn a language, start by consuming interesting and comprehensible content (for example movies) in your target
 language. But the difficulty in the beginning is that almost none of the input is comprehensible.
 
-This app allows for studying subtitle files ahead of time, and memorize words and sentences that occur in the movie/episode. This
+This app allows for studying subtitle files ahead of time and memorizing words and sentences that occur in the movie/episode. This
 should make the content a bit more comprehensible and speed up (and make more enjoyable) the initial stages of language learning.
 
 ### Word classification
 The metric used for classification is the TF-IDF metric, not raw frequency, as frequency tends to prioritize stop words (e.g. "a”,
 “the”, “is”, “are”), which are common in any given text and not particularly interesting memorizable vocabulary. TF-IDF can be summarized
-as "word frequency divided by number of documents word occurs in" - so it prioritizes words common in our target document, but uncommon
+as "word frequency divided by number of documents word occurs in" - so it prioritizes words common in a target document, but uncommon
 in others. Thus it shows words most likely to be relevant for memorizing ahead of watching a movie/episode.
 
 In addition, words-in-context offers name filtering, a best effort algorithm to filter out proper nouns (e.g. "Bob", "Alice", "Greenland"),
@@ -46,7 +46,7 @@ target language and the back is the translated word and sentence. The saved flas
 are saved into Anki under the given deck names. The Anki app provides a nice spaced repetition system and is available on multiple platforms
 (mac, iOS, Windows, Android).
 
-This app is unrelated to the Anki project, but it can act as a complement to it, providing a fast and convenient way to create language
+This app is unrelated to the Anki project, but it acts as a complement to it, providing a fast and convenient way to create language
 learning flash cards.
 
 ### Supported languages
