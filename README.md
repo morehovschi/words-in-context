@@ -10,6 +10,7 @@ audio of the sentence to clarify pronunciation. The example and translation box 
 can be exported to one or more Anki decks.
 
 Quick demo: https://drive.google.com/file/d/1VhKB__TjuWnBvOfQPLN5KhR2Aka78A4G/view?usp=drive_link
+Tutorial on how to use it: https://drive.google.com/file/d/1Hw7pSFRXdMTSxHPL8umvI1npcuz4cwIO/view?usp=drive_link
 
 ### Setup
 1. Clone this repository and `cd` into it
