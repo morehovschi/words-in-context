@@ -505,7 +505,8 @@ class MainWindow( QWidget ):
     translation_complete = pyqtSignal()
     back_text_cleared = pyqtSignal()
 
-    def __init__( self, sub_fpath, target_lang, native_lang, deck_name_to_id ):
+    def __init__( self, sub_fpath, target_lang, native_lang, deck_name_to_id,
+                  out_path="out-data/" ):
         super().__init__()
         self.sub_fpath = sub_fpath
         self.target_lang = target_lang
@@ -520,6 +521,7 @@ class MainWindow( QWidget ):
         self.audio_thread = None
         self.flashcard_viewer = None
         self.corpus = None  # whole word corpus for all srt files in target lang
+        self.out_path = out_path
         if target_lang != "de":
             self.name_filtering = True
         else:
@@ -899,7 +901,8 @@ class MainWindow( QWidget ):
         self.export_button.setEnabled( len( self.flashcards ) > 0 )
 
     def export_flashcards( self ):
-        export_to_anki( self.flashcards, self.deck_name_to_id )
+        export_to_anki( self.flashcards, self.deck_name_to_id,
+                        self.out_path + separate_fpath( self.sub_fpath )[ 1 ] )
         self.flashcards.clear()
         self.update_flashcard_counter()
 

@@ -29,17 +29,22 @@ class Flashcard:
         self.front = front
         self.back = back
 
-def export_to_anki( card_list, deck_name_to_id ):
+def export_to_anki( card_list, deck_name_to_id, fname ):
     """
     write the Flashcard instances in card_list to all the decks defined in
     deck_name_to_id;
 
-    the output consists of as many .apkg files as there are names in deck_name_to_id
-    and the file names are "<deck name>.apkg"
+    out file name format:
+        if only one target deck: "<fname>.apkg"
+        if multiple target decks: "<fname> (<deck name>).apkg"
 
-    nb: deck_name_to_id is a collection mapping deck names to unique id and it helps
-    ensure that a specific name will always match with the same deck id (to avoid
-    creating duplicate decks with existing names)
+    Params:
+        card_list (list): list of Flashcard instances
+        deck_name_to_id (dict): a collection mapping deck names to unique ids to
+                               ensure that a specific name will always match with
+                               the same deck id (to avoid creating duplicate decks
+                               with existing names)
+        fname (str): name of source file (no extension)
     """
     decks = []
     for deck_name, deck_id in deck_name_to_id.items():
@@ -90,6 +95,10 @@ def export_to_anki( card_list, deck_name_to_id ):
             note.guid = guid_for( note.fields + [ "" ] * i )
             deck.add_note( note )
 
-    for i, deck in enumerate( decks ):
-        genanki.Package( deck ).write_to_file( deck.name + ".apkg" )
+    # MISSING-TEST
+    if len( decks ) == 1:
+        genanki.Package( decks[ 0 ] ).write_to_file( f"{fname}.apkg" )
+    else:
+        for i, deck in enumerate( decks ):
+            genanki.Package( deck ).write_to_file( f"{fname} ({deck.name}).apkg" )
 
