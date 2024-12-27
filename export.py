@@ -3,6 +3,8 @@ Utilities for saving the GUI's front and back text as flashcards and writing
 flashcards to .apkg files for all target Anki deck names
 """
 
+import os
+import pickle
 import genanki
 from genanki.util import guid_for
 
@@ -28,6 +30,89 @@ class Flashcard:
     def __init__( self, front, back ):
         self.front = front
         self.back = back
+
+def write_flashcard_to_backup( backup_fname, flashcard, target_subtitle_fname,
+                               target_lang, native_lang, deck_name_to_id ):
+    """
+    write the current flash card to a temporary backup file that is used to recover
+    the session in case the app crashes or is closed without exporting
+
+    Params:
+        backup_fname (str): name of the backup file
+        flashcard (Flashcard): an instance of Flashcard (defined in this file)
+        target_subtitle_fname (str): name of the subtitle file being analyzed by
+                                     main app
+        target_lang (str): target language in the session (ISO 639 code)
+        native_lang (str): native languag in the session (ISO 639 code)
+        deck_name_to_id (dict): dictionary keeping track of Anki deck ID by name
+    """
+    create_backup_file = False
+    if not os.path.isfile( backup_fname ):
+        # if backup file does not yet exist, create one with basic info
+        create_backup_file = True
+
+    with open( backup_fname, "ab" ) as file:
+        if create_backup_file:
+            pickle.dump( ( "target_subtitle_fname", target_subtitle_fname ),
+                         file )
+            pickle.dump( ( "target_lang", target_lang ), file )
+            pickle.dump( ( "native_lang", native_lang ), file )
+            pickle.dump( ( "deck_name_to_id", deck_name_to_id ), file )
+
+        pickle.dump( flashcard, file )
+
+def read_flashcard_backup( backup_fname ):
+    """
+    read the backup file to recover the interrupted session
+
+    Returns:
+        target_subtitle_fname (str): name of the subtitle file being analyzed by
+                                     main app
+        target_lang (str): target language in the session (ISO 639 code)
+        native_lang (str): native languag in the session (ISO 639 code)
+        deck_name_to_id (dict): dictionary keeping track of Anki deck ID by name
+        flashcards (list): a list of instances of Flashcard (defined in this file)
+    """
+    target_subtitle_fname = None
+    target_lang = None
+    native_lang = None
+    deck_name_to_id = None
+
+    flashcards = []
+
+    with open( backup_fname, "rb" ) as file:
+        while True:
+            try:
+                obj = pickle.load( file )
+
+                if isinstance( obj, tuple ):
+                    if obj[ 0 ] == "target_subtitle_fname":
+                        target_subtitle_fname = obj[ 1 ]
+                    elif obj[ 0 ] == "target_lang":
+                        target_lang = obj[ 1 ]
+                    elif obj[ 0 ] == "native_lang":
+                        native_lang = obj[ 1 ]
+                    elif obj[ 0 ] == "deck_name_to_id":
+                        deck_name_to_id = obj[ 1 ]
+                    else:
+                        assert False, "Backup file format does not match expected. "\
+                                      f"Read object: {obj}"
+
+                # else line is not tuple, thus it is a Flashcard instance
+                else:
+                    flashcards.append( obj )
+
+            except EOFError:  # end of file reached
+                break
+
+    assert target_subtitle_fname
+    assert target_lang
+    assert native_lang
+    assert deck_name_to_id
+    assert flashcards
+
+    return ( target_subtitle_fname, target_lang, native_lang, deck_name_to_id,
+           flashcards )
 
 def export_to_anki( card_list, deck_name_to_id, fname ):
     """
