@@ -34,7 +34,12 @@ from extract_words import (
     process_dir,
     LANG_CODE
 )
-from export import Flashcard, export_to_anki
+from export import (
+    Flashcard,
+    export_to_anki,
+    write_flashcard_to_backup,
+    read_flashcard_backup
+)
 
 from user_sessions import (
     AVAILABLE_LANGUAGES,
@@ -46,12 +51,60 @@ from user_sessions import (
 
 import warnings
 
+# name of the file where the session backup is stored
+BACKUP_FNAME = "backup_pickle"
+
 # suppress a specific warning that is produced when writing rich text to Anki deck
 # file when exporting flash cards
 warnings.filterwarnings( "ignore", category=UserWarning )
 
 # initialize translator (for translating to Romanian)
 translator = Translator()
+
+def show_restore_dialog( num_flashcards ):
+    """
+    shows user a dialog asking whether they want to restore the previous session.
+
+    MISSING-TEST: the backend of the session backup has an associated unit test, but
+                  its integration with the GUI (i.e. this function) does not yet.
+
+    Returns:
+        response (bool): True (yes, use the previous session) or False (discard the
+                         previous session and delete the backup file).
+    """
+
+    msg_box = QMessageBox()
+    msg_box.setIcon( QMessageBox.Question )
+    msg_box.setWindowTitle( "Restore Session" )
+    msg_box.setText( f"A previously unsaved session containing {num_flashcards} "\
+                     "flashcards was found. Would you like to restore it or "\
+                     "discard it?" )
+
+    msg_box.setStandardButtons( QMessageBox.Yes | QMessageBox.No )
+    msg_box.setDefaultButton( QMessageBox.Yes )
+    msg_box.button( QMessageBox.Yes ).setText( "Restore" )
+    msg_box.button( QMessageBox.No ).setText( "Discard" )
+    response = msg_box.exec()
+    return response == QMessageBox.Yes
+
+def select_subtitle_file():
+    """
+    shows user a dialog box prompting for file selection
+
+    MISSING-TEST
+    """
+    options = QFileDialog.Options()
+    options |= QFileDialog.ReadOnly
+    file_dialog = QFileDialog()
+    file_dialog.setOptions( options )
+    file_dialog.setWindowTitle( "Select Subtitle File" )
+    file_dialog.setDirectory( "data/" )  # Default directory to open
+    file_dialog.setNameFilter( "Subtitle Files (*.srt)" )
+
+    if file_dialog.exec_() == QFileDialog.Accepted:
+        return file_dialog.selectedFiles()[ 0 ]
+
+    return None
 
 class AudioThread( QThread ):
     """
@@ -98,25 +151,6 @@ class TranslationThread( QThread ):
                                                src=self.target_lang,
                                                dest=self.native_lang ).text
         self.translation_done.emit( ( trans_word, trans_sentence ) )
-
-def select_subtitle_file():
-    """
-    shows user a dialog box prompting for file selection
-
-    MISSING-TEST
-    """
-    options = QFileDialog.Options()
-    options |= QFileDialog.ReadOnly
-    file_dialog = QFileDialog()
-    file_dialog.setOptions( options )
-    file_dialog.setWindowTitle( "Select Subtitle File" )
-    file_dialog.setDirectory( "data/" )  # Default directory to open
-    file_dialog.setNameFilter( "Subtitle Files (*.srt)" )
-
-    if file_dialog.exec_() == QFileDialog.Accepted:
-        return file_dialog.selectedFiles()[ 0 ]
-
-    return None
 
 class SingleLineTextEdit( QTextEdit ):
     """
@@ -506,14 +540,14 @@ class MainWindow( QWidget ):
     back_text_cleared = pyqtSignal()
 
     def __init__( self, sub_fpath, target_lang, native_lang, deck_name_to_id,
-                  out_path="out-data/" ):
+                  out_path="out-data/", flashcards=None ):
         super().__init__()
         self.sub_fpath = sub_fpath
         self.target_lang = target_lang
         self.native_lang = native_lang
         self.deck_name_to_id = deck_name_to_id
 
-        self.flashcards = []
+        self.flashcards = flashcards if flashcards else []
         self.doc_word_stats = None
         self.srt_subtitles = None
         self.top_words = None
@@ -628,6 +662,9 @@ class MainWindow( QWidget ):
             self.word_list.setCurrentRow( 0 )  # select first word by default
             self.update_examples()
             self.display_example()
+
+        # in case flashcards are loaded from a previous session
+        self.update_flashcard_counter()
 
     def toggle_name_filtering( self ):
         """
@@ -873,9 +910,14 @@ class MainWindow( QWidget ):
         """
         front_text = self.front_text_edit.toHtml()
         back_text = self.back_text_edit.toHtml()
+
         if front_text and back_text:
             new_flashcard = Flashcard( front_text, back_text )
             self.flashcards.append( new_flashcard )
+
+            write_flashcard_to_backup( BACKUP_FNAME, self.flashcards[ -1 ],
+                                       self.sub_fpath, self.target_lang,
+                                       self.native_lang, self.deck_name_to_id )
 
         self.update_flashcard_counter()
 
@@ -903,6 +945,10 @@ class MainWindow( QWidget ):
     def export_flashcards( self ):
         export_to_anki( self.flashcards, self.deck_name_to_id,
                         self.out_path + separate_fpath( self.sub_fpath )[ 1 ] )
+
+        # session export successful, so clear the backup
+        os.unlink( BACKUP_FNAME )
+
         self.flashcards.clear()
         self.update_flashcard_counter()
 
@@ -911,30 +957,59 @@ if __name__ == "__main__":
 
     app.setStyleSheet( "QWidget { font-size: 17px; }" )
 
-    selection_dialog = SessionSelectionDialog(
-        user_sessions_file="user_sessions.json" )
-    if selection_dialog.exec_() == QDialog.Accepted:
-        session_name, deck_name_to_id, target_lang_name, native_lang_name =\
-            selection_dialog.get_selection()
-    else:
-        QMessageBox.warning( None, "No Session Selected",
-                             "No session selected. Exiting." )
-        sys.exit()
+    # tracker variable for use when session backup is found
+    restore = False
 
-    sub_fpath = select_subtitle_file()
-    if not sub_fpath:
-        QMessageBox.warning( None, "No File Selected",
-                             "No subtitle file selected. Exiting." )
-        sys.exit()
+    # session preference initialization
+    if os.path.isfile( BACKUP_FNAME ):
+        # previous session crashed or was closed without saving
+        saved_data = read_flashcard_backup( BACKUP_FNAME )
 
-    # convert language names to abbreviated codes
-    target_lang = LANG_CODE[ target_lang_name ]
-    native_lang = LANG_CODE[ native_lang_name ]
+        sub_fpath = saved_data[ 0 ]
+        target_lang = saved_data[ 1 ]
+        native_lang = saved_data[ 2 ]
+        deck_name_to_id = saved_data[ 3 ]
+        flashcards = saved_data[ 4 ]
+
+        # ask user if they want to use found backup
+        restore = show_restore_dialog( len( flashcards ) )
+
+    # if no backup from prev session found, or user chose to discard found backup;
+    # remove backup file if any and get the preferences from user
+    if not restore:
+        if os.path.isfile( BACKUP_FNAME ):
+            os.unlink( BACKUP_FNAME )
+
+        selection_dialog = SessionSelectionDialog(
+            user_sessions_file="user_sessions.json" )
+
+        if selection_dialog.exec_() == QDialog.Accepted:
+            session_name, deck_name_to_id, target_lang_name, native_lang_name =\
+                selection_dialog.get_selection()
+        else:
+            QMessageBox.warning( None, "No Session Selected",
+                                 "No session selected. Exiting." )
+            sys.exit()
+
+        sub_fpath = select_subtitle_file()
+        if not sub_fpath:
+            QMessageBox.warning( None, "No File Selected",
+                                 "No subtitle file selected. Exiting." )
+            sys.exit()
+
+        # convert language names to abbreviated codes
+        target_lang = LANG_CODE[ target_lang_name ]
+        native_lang = LANG_CODE[ native_lang_name ]
+
+        # starting fresh session, so no flashcards saved from before
+        flashcards = None
+    # END session preference initialization
 
     mainWindow = MainWindow( sub_fpath=sub_fpath,
                              target_lang=target_lang,
                              native_lang=native_lang,
-                             deck_name_to_id=deck_name_to_id )
+                             deck_name_to_id=deck_name_to_id,
+                             flashcards=flashcards )
 
     app.aboutToQuit.connect( MainWindow.clean_up_temp_audio )
     mainWindow.show()
