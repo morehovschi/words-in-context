@@ -194,11 +194,15 @@ def analyze_file( fpath, model ):
     with the following keys:
         "wsid" -> dictionary mapping each word to the indices of the sentences where
                   where it appears in the file
+        "in_sound_desc" -> dictionary parallel to "wsid" where every occurrence of
+                           the word in a line is marked "1" if the word appears in a
+                           sound description (within square brackets) and "0"
+                           otherwise
         "likely_names" -> dictionary with words that may be names; key: the index of
                           the word within the sentence
         "total_words" -> number of total word occurences in this file
     """
-    file_stats = { "wsid": {}, "likely_names": {} }
+    file_stats = { "wsid": {}, "likely_names": {}, "in_sound_desc": {} }
 
     subs = srt_subtitles( fpath, separator=" Endlineword" )
 
@@ -212,6 +216,8 @@ def analyze_file( fpath, model ):
     word_counter = 0
     # word position in sentence
     pos_counter = 0
+    # whether the word is found within square brackets
+    in_sound_desc = False
 
     def save_word( word ):
         # helper that saves the stats for a particular word;
@@ -220,6 +226,11 @@ def analyze_file( fpath, model ):
             file_stats[ "wsid" ][ word ] = [ line_counter ]
         else:
             file_stats[ "wsid" ][ word ].append( line_counter )
+
+        if word not in file_stats[ "in_sound_desc" ]:
+            file_stats[ "in_sound_desc" ][ word ] = [ in_sound_desc ]
+        else:
+            file_stats[ "in_sound_desc" ][ word ].append( in_sound_desc )
 
         # if word is upper case, it is possibly a name
         if is_namecase( doc[ i ].text ):
@@ -233,6 +244,12 @@ def analyze_file( fpath, model ):
             line_counter += 1
             pos_counter = 0
             continue
+
+        if doc[ i ].text == "[":
+            in_sound_desc = True
+
+        if doc[ i ].text == "]":
+            in_sound_desc = False
 
         # if token is sentence start, or the previous character is a punctuation
         # mark that acts as a sentence start -> reset the word position counter
