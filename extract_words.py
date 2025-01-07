@@ -245,10 +245,10 @@ def analyze_file( fpath, model ):
             pos_counter = 0
             continue
 
-        if doc[ i ].text == "[":
+        if "[" in doc[ i ].text:
             in_sound_desc = True
 
-        if doc[ i ].text == "]":
+        if "]" in doc[ i ].text:
             in_sound_desc = False
 
         # if token is sentence start, or the previous character is a punctuation

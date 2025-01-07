@@ -7952,7 +7952,7 @@ Heinrich! Heinrich!
 
 5989
 00:00:00,000 --> 00:00:00,000
-Das war das größte Geheimdienstversagen
+NOTE: "Faust ends at line above, after this is fake data to model needed test scenarios"
 
 5990
 00:00:00,000 --> 00:00:00,000
@@ -7965,3 +7965,12 @@ Das war das größte Geheimdienstversagen
 5992
 00:00:00,000 --> 00:00:00,000
 Das war das größte Geheimdienstversagen
+
+5993
+00:00:00,000 --> 00:00:00,000
+Das war das größte Geheimdienstversagen
+
+5994
+00:00:00,000 --> 00:00:00,000
+-[flüstert]
+-[Entführer, off] Begreifst du es endlich?

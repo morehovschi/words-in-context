@@ -67,5 +67,24 @@ class TestDeprioritize( unittest.TestCase ):
         self.assertEqual( dep_dict[ "bang" ][ "tf-idf" ],
                           no_dep_dict[ "bang" ][ "tf-idf" ] )
 
+    def test_deprioritize_tight_bracket_bug( self ):
+        """
+        in the initial version of the feature, square brackets were always assumed
+        to be parsed as individual tokens by the spaCy language model;
+
+        however, they would sometimes occur in sequences like "-[flüstert", and
+        the sound description detection algorithm would not work correctly;
+
+        test that a problematic example is processed correctly by analyze_file
+        """
+        model = spacy.load( "de_core_news_sm" )
+        file_stats = analyze_file( "data/faust_3.srt",
+                                    model )
+
+        # in the mockup example, "entführer" occurs within square brackets, but
+        # before the bug fix, the parser classifies it as outside square brackets;
+        # the only item in the list indexed below should be True
+        self.assertTrue( file_stats[ "in_sound_desc" ][ "entführer" ][ 0 ] )
+
 if __name__ == "__main__":
     unittest.main()
