@@ -386,7 +386,8 @@ def process_dir( dirpath, target_lang=None,
 
     return file_stats
 
-def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None ):
+def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None,
+                        deprioritize_sound_desc=False ):
     """
     given a path to a data directory and the name of a file in it, loads data about
     word occurrences in all files (or, if unavailable, computes and saves it), and
@@ -403,41 +404,43 @@ def get_doc_word_stats( data_path, file, name_filtering=False, corpus=None ):
 
     word_collection = corpus[ file ][ "wsid" ]
     likely_names = corpus[ file ][ "likely_names" ]
+    in_sound_desc = corpus[ file ][ "in_sound_desc" ]
 
     words_in_doc = corpus[ file ][ "total_words" ]
 
     doc_word_stats = []
 
     for word in word_collection:
-        if word == "__total__":
-            continue
-
         word_stats = {}
 
-        word_stats[ 'count' ] = len( word_collection[ word ] )
-        word_stats[ 'words_in_doc' ] = words_in_doc
-        word_stats[ 'frequency' ] = word_stats[ 'count' ] /\
-                                        word_stats[ 'words_in_doc' ]
-        word_stats[ 'word_occs_in_docs' ] = 0
-        word_stats[ 'word_occ_ids' ] = word_collection[ word ]
+        word_stats[ "count" ] = len( word_collection[ word ] )
+        word_stats[ "words_in_doc" ] = words_in_doc
+        word_stats[ "frequency" ] = word_stats[ "count" ] /\
+                                        word_stats[ "words_in_doc" ]
+        word_stats[ "word_occs_in_docs" ] = 0
+        word_stats[ "word_occ_ids" ] = word_collection[ word ]
 
         for other_doc_name, other_doc in corpus.items():
             if word in other_doc[ "wsid" ]:
-                word_stats[ 'word_occs_in_docs' ] += 1
+                word_stats[ "word_occs_in_docs" ] += 1
 
-        word_stats[ 'tf-idf' ] = word_stats[ 'frequency' ] *\
-            math.log( len( corpus ) / word_stats[ 'word_occs_in_docs' ] )
+        word_stats[ "tf-idf" ] = word_stats[ "frequency" ] *\
+            math.log( len( corpus ) / word_stats[ "word_occs_in_docs" ] )
 
         # tank the TF-IDF score of any word that has been deemed a likely name;
         # it is most likely irrelevant to a language learner watching the movie
         if name_filtering and ( word in likely_names ):
-            word_stats[ 'tf-idf' ] = 0
+            word_stats[ "tf-idf" ] = 0
+
+        # if at least one occurrence of word is outside of square brackets
+        if deprioritize_sound_desc and not all( in_sound_desc[ word ] ):
+            word_stats[ "tf-idf" ] *= 10000
 
         # replace word count in doc with dictionary of more detailed statistics
         doc_word_stats.append(  ( word, word_stats ) )
 
     # sort words in doc by tf-idf and prepend None so that indexing starts at 1
     doc_word_stats = [ None ] +\
-        sorted( doc_word_stats, key=lambda tup: tup[ 1 ][ 'tf-idf' ], reverse=True )
+        sorted( doc_word_stats, key=lambda tup: tup[ 1 ][ "tf-idf" ], reverse=True )
     return doc_word_stats
 
