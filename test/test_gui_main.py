@@ -203,5 +203,93 @@ class TestNameFiltering( unittest.TestCase ):
             self.assertEqual( top_word_list.item( i ).text(),
                               unfiltered_top20[ i ] )
 
+class TestDeprioritizeSoundDescriptionBox( unittest.TestCase ):
+    """
+    test toggle to deprioritize sound descriptions in the GUI
+    """
+
+    def setUp( self ):
+        """
+        initialize the main window with a test subtitle file path
+        """
+        self.app = QApplication( sys.argv )
+        self.main_window = MainWindow(
+            sub_fpath="data/riders-of-destiny-1933.srt",
+            target_lang="en",
+            native_lang="ro",
+            deck_name_to_id={ "Test": 1 } )
+        self.main_window.show()
+
+    def tearDown( self ):
+        self.main_window.close()
+        self.app = None
+
+    def test_deprioritize_sound_description_box( self ):
+        """
+        check the top 20 elements in the word list before and after checking the
+        box to toggle deprioritization of sound descriptions
+        """
+
+        top_word_list = self.main_window.word_list
+        example_list = self.main_window.example_list
+
+        # expected content for sound desc deprioritization disabled (by default)
+        no_dep_top20 = [
+            '1.  "kincaid"',
+            '2.  "rancher"',
+            '3.  "water"',
+            '4.  "dad"',
+            '5.  "outlaw"',
+            '6.  "fay"',
+            '7.  "creek"',
+            '8.  "saunder"',
+            '9.  "ha"',
+            '10.  "gunman"',
+            '11.  "interpose"',
+            '12.  "biscuit"',
+            '13.  "horse"',
+            '14.  "saddle"',
+            '15.  "ranch"',
+            '16.  "inaudible"',
+            '17.  "singing"',
+            '18.  "land"',
+            '19.  "stage"',
+            '20.  "running"'
+        ]
+        for i in range( 20 ):
+            self.assertEqual( top_word_list.item( i ).text(),
+                              no_dep_top20[ i ] )
+
+        # like in test above, simulate checking box with space bar instead of click
+        QTest.keyClick( self.main_window.deprioritize_sound_desc_box, Qt.Key_Space )
+
+        # expected content for sound desc deprioritization enabled
+        dep_top20 = [
+            '1.  "kincaid"',
+            '2.  "rancher"',
+            '3.  "water"',
+            '4.  "dad"',
+            '5.  "outlaw"',
+            '6.  "fay"',
+            '7.  "creek"',
+            '8.  "saunder"',
+            '9.  "ha"',
+            '10.  "gunman"',
+            '11.  "biscuit"',
+            '12.  "horse"',
+            '13.  "saddle"',
+            '14.  "ranch"',
+            '15.  "singing"',
+            '16.  "land"',
+            '17.  "stage"',
+            '18.  "running"',
+            '19.  "brand"',
+            '20.  "valley"'
+        ]
+
+        for i in range( 20 ):
+            self.assertEqual( top_word_list.item( i ).text(),
+                              dep_top20[ i ] )
+
 if __name__ == "__main__":
     unittest.main()

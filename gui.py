@@ -561,6 +561,8 @@ class MainWindow( QWidget ):
         else:
             self.name_filtering = False
 
+        self.deprioritize_sound_desc = False
+
         self.initUI()
 
     def initUI( self ):
@@ -585,11 +587,17 @@ class MainWindow( QWidget ):
         self.middle_section = QVBoxLayout()
         self.info_label = QLabel()
         self.example_list = QListWidget()
-        self.blank_row = QLabel( "" )
+        self.deprioritize_sound_desc_box = QCheckBox()
+        self.deprioritize_sound_desc_box.setChecked(
+            self.deprioritize_sound_desc )
+        dsd = self.deprioritize_sound_desc
+        self.deprioritize_sound_desc_box.setText(
+            ( "*" if dsd else "" ) + "Deprioritize sound descriptions " +
+            ( "enabled" if dsd else "disabled" ) )
         self.example_list.setWordWrap( QTextOption.WordWrap )
         self.middle_section.addWidget( self.info_label )
         self.middle_section.addWidget( self.example_list )
-        self.middle_section.addWidget( self.blank_row )
+        self.middle_section.addWidget( self.deprioritize_sound_desc_box )
 
         # layout for the two buttons in the right section
         button_layout = QHBoxLayout()
@@ -653,6 +661,9 @@ class MainWindow( QWidget ):
         if self.target_lang != "de":
             self.nf_button.toggled.connect( self.toggle_name_filtering )
 
+        self.deprioritize_sound_desc_box.toggled.connect(
+            self.toggle_deprioritize_sound_desc )
+
         self.media_player = QMediaPlayer()
 
         # extract the top words in the analyzed file
@@ -680,6 +691,21 @@ class MainWindow( QWidget ):
             self.update_examples()
             self.display_example()
 
+    def toggle_deprioritize_sound_desc( self ):
+        """
+        gets called when user checks/unchecks "Deprioritize sound descriptions"
+        """
+        self.deprioritize_sound_desc = self.deprioritize_sound_desc_box.isChecked()
+        dsd = self.deprioritize_sound_desc
+        self.deprioritize_sound_desc_box.setText(
+            ( "*" if dsd else "" ) + "Deprioritize sound descriptions " +
+            ( "enabled" if dsd else "disabled" ) )
+
+        self.load_top_words()
+        if self.word_list.count() > 0:
+            self.word_list.setCurrentRow( 0 )  # select first word by default
+            self.update_examples()
+            self.display_example()
 
     def load_top_words( self ):
         """
@@ -699,9 +725,9 @@ class MainWindow( QWidget ):
             self.corpus =\
                 process_dir( data_path,
                              target_lang=self.target_lang )[ self.target_lang ]
-        self.doc_word_stats = get_doc_word_stats( data_path, file+ext,
-                                                  self.name_filtering,
-                                                  corpus=self.corpus )
+        self.doc_word_stats = get_doc_word_stats(
+            data_path, file+ext, self.name_filtering, corpus=self.corpus,
+            deprioritize_sound_desc=self.deprioritize_sound_desc )
 
         self.word_list.clear()
         self.top_words = []
@@ -723,7 +749,8 @@ class MainWindow( QWidget ):
             '<div style="line-height: 1.15;">'
             f'Count in this doc: {selected_word_stats["count"]}<br>'
             f'Docs containing word: {selected_word_stats["word_occs_in_docs"]}<br>'
-            f'TF-IDF: {selected_word_stats["tf-idf"]:.2E}'
+            f'TF-IDF{"*"if self.deprioritize_sound_desc else ""}: '
+               f'{selected_word_stats["tf-idf"]:.2E}'
             '</div>'
         )
 
